@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Triple.Cell 牌卡抽牌</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#548EB8">
+  <link rel="icon" type="image/png" href="icons.png">
+  <link rel="apple-touch-icon" href="icons.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="牌卡抽牌">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ── Launch Screen ── -->
+  <section id="screen-launch" class="screen screen-launch">
+    <div class="launch-body">
+      <div class="launch-ornament">✦  ✦  ✦</div>
+      <h1 class="launch-brand">細胞日常插畫</h1>
+      <p class="launch-sub">Triple.Cell_illustration</p>
+      <div class="launch-links">
+        <a href="https://www.instagram.com/triple.cell_illustration/" target="_blank" rel="noopener" class="launch-link" title="Instagram">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+        </a>
+        <a href="https://from-9-to-1-with-triplecell.super.site" target="_blank" rel="noopener" class="launch-link" title="Joy 的細胞日子">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </a>
+        <a href="https://api.payuni.com.tw/api/su/store_info/U06574264/Tnow85jNbkkjX1McMaQ7" target="_blank" rel="noopener" class="launch-link" title="購買牌卡">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        </a>
+      </div>
+      <button class="btn btn-cta launch-start" id="btn-launch-start" onclick="document.getElementById('screen-launch').classList.add('hidden');document.getElementById('screen-home').classList.remove('hidden');">開始抽牌</button>
+      <p class="launch-copy">Lurn Creative Ltd. 渝澪創意有限公司</p>
+    </div>
+  </section>
+
+  <!-- ── 首頁：選擇系列 ── -->
+  <section id="screen-home" class="screen hidden">
+    <div class="home-header">
+      <div class="ornament">✦  ✦  ✦</div>
+      <h1>牌卡抽牌</h1>
+      <p>深呼吸，來選擇你今天所需要的幫助吧！</p>
+    </div>
+    <div class="series-grid">
+      <button class="series-card" id="btn-tarot">
+        <span class="series-icon">🌙</span>
+        <h2>塔羅牌</h2>
+        <p>78 張牌・大小阿爾克那<br>多種排陣可選</p>
+      </button>
+      <button class="series-card" id="btn-deity">
+        <span class="series-icon">🪷</span>
+        <h2>神明訊息牌</h2>
+        <p>選一張，看看有什麼訊息到來吧</p>
+      </button>
+    </div>
+  </section>
+
+  <!-- ── 選擇排陣 ── -->
+  <section id="screen-spread" class="screen hidden">
+    <div class="topbar">
+      <button class="btn-back" id="btn-back-home">← 返回</button>
+    </div>
+    <h2 class="screen-title">選擇排陣</h2>
+    <p class="screen-sub">請選擇你想使用的牌陣</p>
+    <div id="spread-options"></div>
+  </section>
+
+  <!-- ── 四季排陣：節氣確認 ── -->
+  <section id="screen-seasons-confirm" class="screen hidden">
+    <div class="topbar">
+      <button class="btn-back" id="btn-back-seasons">← 返回</button>
+    </div>
+    <div class="seasons-confirm-wrap">
+      <div class="seasons-ornament">✦  ✦  ✦</div>
+      <h2 class="seasons-title">四季排陣</h2>
+      <p class="seasons-desc">這個牌陣專為節氣轉換時刻而設<br>適合在以下四個時間前後使用</p>
+      <div class="seasons-dates">
+        <div class="season-item">🌸 <strong>春分</strong><span>3/20</span></div>
+        <div class="season-divider">·</div>
+        <div class="season-item">☀️ <strong>夏至</strong><span>6/21</span></div>
+        <div class="season-divider">·</div>
+        <div class="season-item">🍂 <strong>秋分</strong><span>9/22</span></div>
+        <div class="season-divider">·</div>
+        <div class="season-item">❄️ <strong>冬至</strong><span>12/21</span></div>
+      </div>
+      <p class="seasons-confirm-text">今天是節氣時刻嗎？</p>
+      <div class="seasons-actions">
+        <button class="btn btn-cta" id="btn-seasons-yes">是，開始抽牌</button>
+        <button class="btn btn-ghost" id="btn-seasons-no">還不是，先回去</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 選牌板 ── -->
+  <section id="screen-board" class="screen hidden">
+
+    <!-- 抽牌前準備 overlay -->
+    <div id="prepare-overlay" class="prepare-overlay">
+      <div class="prepare-body">
+        <div class="prepare-ornament">✦  ✦  ✦</div>
+        <h2 class="prepare-title">抽牌前，先靜下來</h2>
+        <ol class="prepare-steps">
+          <li><span class="prepare-num">1</span><span class="prepare-text">深呼吸</span></li>
+          <li><span class="prepare-num">2</span><span class="prepare-text">在心中默念你想問的問題<br><small>越具體越好，因為模糊，也只會得到模糊的訊息</small></span></li>
+          <li><span class="prepare-num">3</span><span class="prepare-text">準備好了，就開始抽牌吧</span></li>
+        </ol>
+        <button class="btn btn-cta prepare-start" id="btn-prepare-start" onclick="document.getElementById('prepare-overlay').classList.add('hidden')">我準備好了</button>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <button class="btn-back" id="btn-back-spread">← 返回</button>
+      <button class="btn-back" id="btn-back-home-board" style="margin-left:auto">回首頁</button>
+    </div>
+
+    <h2 id="board-title"></h2>
+    <p id="board-sub"></p>
+
+    <!-- 進度提示 + 操作按鈕 -->
+    <div class="board-toolbar">
+      <span id="progress-text"></span>
+      <div class="board-actions">
+        <button class="btn btn-ghost" id="btn-reset-selection">重新選牌</button>
+      </div>
+    </div>
+
+    <!-- 滑動提示 -->
+    <p id="swipe-hint"><span class="hint-arrow">←</span> 請左右滑動，來選牌 <span class="hint-arrow">→</span></p>
+
+    <!-- 牌庫：全部牌面朝下，固定在上方 -->
+    <div id="card-pool-wrap">
+      <div id="card-pool"></div>
+    </div>
+
+    <!-- 排陣位置槽，選完後往上推 -->
+    <div id="position-slots-wrap">
+      <div id="position-slots"></div>
+    </div>
+    <button class="btn btn-cta hidden" id="btn-reveal-meanings">查看解讀 ↓</button>
+
+    <!-- 牌義解讀 -->
+    <!-- 輸出結果（存圖 + 複製文字） -->
+    <div id="export-area" class="hidden">
+      <div id="export-snapshot">
+        <div id="snapshot-slots"></div>
+        <div id="snapshot-meanings"></div>
+      </div>
+    </div>
+
+    <section id="meanings-section" class="hidden">
+      <h3>✦ 牌義解讀 ✦</h3>
+      <p class="meanings-disclaimer" id="meanings-disclaimer"></p>
+      <div id="meanings-list"></div>
+      <div class="meanings-actions">
+        <button class="btn btn-ghost" id="btn-redraw-bottom" onclick="document.getElementById('btn-reset-selection').click()">重新選牌</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('btn-back-home-board').click()">回首頁</button>
+      </div>
+    </section>
+  </section>
+
+  <!-- ── 牌卡放大 Lightbox ── -->
+  <div id="card-lightbox" class="card-lightbox hidden" onclick="this.classList.add('hidden')">
+    <button class="lightbox-close" onclick="event.stopPropagation();document.getElementById('card-lightbox').classList.add('hidden')">✕</button>
+    <div class="lightbox-card" onclick="event.stopPropagation()">
+      <img id="lightbox-img" src="" alt="">
+    </div>
+  </div>
+
+  <!-- ── 全站選單（右上角） ── -->
+  <button class="site-menu-btn" id="site-menu-btn"
+    onclick="document.getElementById('site-menu-panel').classList.toggle('open')"
+    aria-label="選單">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <div class="site-menu-overlay" id="site-menu-panel" onclick="this.classList.remove('open')">
+    <div class="site-menu-drawer" onclick="event.stopPropagation()">
+
+      <button class="site-menu-close" onclick="document.getElementById('site-menu-panel').classList.remove('open')">✕</button>
+
+      <!-- 切換牌組 -->
+      <div class="site-menu-section">
+        <p class="site-menu-label">切換牌組</p>
+        <div class="site-menu-series">
+          <button class="site-menu-series-btn" onclick="document.getElementById('site-menu-panel').classList.remove('open'); goHome(); setTimeout(()=>chooseSeries('tarot'),50)">
+            🌙 塔羅牌
+          </button>
+          <button class="site-menu-series-btn" onclick="document.getElementById('site-menu-panel').classList.remove('open'); goHome(); setTimeout(()=>chooseSeries('deity'),50)">
+            🪷 神明訊息牌
+          </button>
+        </div>
+      </div>
+
+      <div class="site-menu-divider"></div>
+
+      <!-- 關於 -->
+      <div class="site-menu-section">
+        <p class="site-menu-label">關於</p>
+        <p class="site-menu-brand">Triple.Cell_illustration<br><span>細胞日常插畫</span></p>
+        <div class="site-menu-links">
+          <a href="https://www.instagram.com/triple.cell_illustration/" target="_blank" rel="noopener" class="site-menu-link">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            細胞日常插畫
+          </a>
+          <a href="https://from-9-to-1-with-triplecell.super.site" target="_blank" rel="noopener" class="site-menu-link">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Joy 的細胞日子
+          </a>
+          <a href="https://api.payuni.com.tw/api/su/store_info/U06574264/Tnow85jNbkkjX1McMaQ7" target="_blank" rel="noopener" class="site-menu-link">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            購買牌卡
+          </a>
+        </div>
+      </div>
+
+      <div class="site-menu-divider"></div>
+
+      <p class="site-menu-copy">
+        © Triple.Cell_illustration 細胞日常插畫<br>
+        Lurn Creative Ltd. 渝澪創意有限公司
+      </p>
+    </div>
+  </div>
+
+  <!-- ── 全站固定 Footer（桌機版） ── -->
+  <footer class="site-footer">
+    <div class="site-footer-links">
+      <a href="https://www.instagram.com/triple.cell_illustration/" target="_blank" rel="noopener" class="footer-link">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+        細胞日常插畫
+      </a>
+      <span class="footer-dot">·</span>
+      <a href="https://from-9-to-1-with-triplecell.super.site" target="_blank" rel="noopener" class="footer-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        Joy 的細胞日子
+      </a>
+      <span class="footer-dot">·</span>
+      <a href="https://api.payuni.com.tw/api/su/store_info/U06574264/Tnow85jNbkkjX1McMaQ7" target="_blank" rel="noopener" class="footer-link footer-link-shop">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        購買牌卡
+      </a>
+    </div>
+    <div class="site-footer-copy">
+      © Triple.Cell_illustration 細胞日常插畫<br>
+      Lurn Creative Ltd. 渝澪創意有限公司
+    </div>
+  </footer>
+
+<script src="js/tarot-data.js"></script>
+  <script src="js/deity-data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    function openLightbox(src) {
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('card-lightbox').classList.remove('hidden');
+    }
+    // 阻止圖片右鍵另存
+    document.addEventListener('contextmenu', e => {
+      if (e.target.tagName === 'IMG') e.preventDefault();
+    });
+    // 阻止圖片拖曳另存
+    document.addEventListener('dragstart', e => {
+      if (e.target.tagName === 'IMG') e.preventDefault();
+    });
+
+    // Service Worker 註冊
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

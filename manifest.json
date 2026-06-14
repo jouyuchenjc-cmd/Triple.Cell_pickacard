@@ -1,0 +1,18 @@
+{
+  "name": "Triple.Cell 牌卡抽牌",
+  "short_name": "牌卡抽牌",
+  "description": "Triple.Cell_illustration 牌卡抽牌 Web App",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#EDE8DF",
+  "theme_color": "#548EB8",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons.png",
+      "sizes": "2134x2134",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

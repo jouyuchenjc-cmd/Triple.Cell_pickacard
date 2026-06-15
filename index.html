@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="牌卡抽牌">
+  <meta name="apple-mobile-web-app-title" content="Pick a card">
 
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -107,10 +107,12 @@
         <h2 class="prepare-title">抽牌前，先靜下來</h2>
         <ol class="prepare-steps">
           <li><span class="prepare-num">1</span><span class="prepare-text">深呼吸</span></li>
-          <li><span class="prepare-num">2</span><span class="prepare-text">在心中默念你想問的問題<br><small>越具體越好，因為模糊，也只會得到模糊的訊息</small></span></li>
+          <li><span class="prepare-num">2</span><span class="prepare-text">在心中默念你想問的問題<br><small>越具體越好，因為模糊，也只會得到模糊的訊息</small>
+            <textarea id="prepare-question" class="prepare-question-input" placeholder="也可以打在這裡（選填）" rows="2"></textarea>
+          </span></li>
           <li><span class="prepare-num">3</span><span class="prepare-text">準備好了，就開始抽牌吧</span></li>
         </ol>
-        <button class="btn btn-cta prepare-start" id="btn-prepare-start" onclick="document.getElementById('prepare-overlay').classList.add('hidden')">我準備好了</button>
+        <button class="btn btn-cta prepare-start" id="btn-prepare-start" onclick="captureQuestion(); document.getElementById('prepare-overlay').classList.add('hidden')">我準備好了</button>
       </div>
     </div>
 
@@ -121,6 +123,13 @@
 
     <h2 id="board-title"></h2>
     <p id="board-sub"></p>
+
+    <!-- 題目輸入欄 -->
+    <div class="board-question-wrap">
+      <input type="text" id="board-question-input" class="board-question-input"
+        placeholder="你的問題是什麼？（選填，可隨時修改）"
+        oninput="updateQuestion(this.value)">
+    </div>
 
     <!-- 進度提示 + 操作按鈕 -->
     <div class="board-toolbar">
@@ -155,13 +164,30 @@
 
     <section id="meanings-section" class="hidden">
       <h3>✦ 牌義解讀 ✦</h3>
+      <div id="meanings-question" class="meanings-question hidden"></div>
       <p class="meanings-disclaimer" id="meanings-disclaimer"></p>
       <div id="meanings-list"></div>
       <div class="meanings-actions">
+        <button class="btn btn-primary" id="btn-save-record" onclick="manualSave()">儲存這次紀錄</button>
         <button class="btn btn-ghost" id="btn-redraw-bottom" onclick="document.getElementById('btn-reset-selection').click()">重新選牌</button>
         <button class="btn btn-ghost" onclick="document.getElementById('btn-back-home-board').click()">回首頁</button>
       </div>
     </section>
+  </section>
+
+  <!-- ── 抽牌紀錄分頁 ── -->
+  <section id="screen-history" class="screen hidden">
+    <div class="topbar">
+      <button class="btn-back" onclick="showOnly('screen-home')">← 返回</button>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost" style="font-size:13px;padding:7px 14px" onclick="importHistoryJSON()">↑ 匯入</button>
+        <button class="btn btn-ghost" style="font-size:13px;padding:7px 14px" onclick="exportHistoryJSON()">↓ 備份 JSON</button>
+        <button class="btn btn-ghost" style="font-size:13px;padding:7px 14px" onclick="downloadHistory()">↓ CSV</button>
+        <button class="btn btn-ghost" style="font-size:13px;padding:7px 14px;color:#c0392b" onclick="clearHistory()">清除全部</button>
+      </div>
+    </div>
+    <h2 class="screen-title">抽牌紀錄</h2>
+    <div id="history-list" class="history-list"></div>
   </section>
 
   <!-- ── 牌卡放大 Lightbox ── -->
@@ -197,6 +223,9 @@
           </button>
           <button class="site-menu-series-btn" onclick="document.getElementById('site-menu-panel').classList.remove('open'); goHome(); setTimeout(()=>chooseSeries('deity'),50)">
             🪷 神明訊息牌
+          </button>
+          <button class="site-menu-series-btn" onclick="document.getElementById('site-menu-panel').classList.remove('open'); showHistoryScreen()">
+            📋 抽牌紀錄
           </button>
         </div>
       </div>

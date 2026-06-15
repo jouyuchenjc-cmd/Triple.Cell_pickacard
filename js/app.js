@@ -352,7 +352,10 @@ function renderMeanings() {
         <span class="meaning-name">${card.name}</span>
       </div>
       <div class="meaning-keyword">${card.meaning || ''}</div>
-      ${cardText ? `<div class="meaning-desc"><span class="meaning-label">牌面文字</span>${cardText.replace(/\n/g, '，')}</div>` : ''}
+      ${cardText ? (state.series === 'tarot'
+        ? `<div class="meaning-desc"><span class="meaning-label">牌面文字</span>${cardText.replace(/\n/g, '，')}</div>`
+        : `<div class="meaning-desc"><span class="meaning-label meaning-label--inline">牌面文字</span>${cardText}</div>`
+      ) : ''}
       ${oracleText ? `<div class="meaning-oracle">${oracleText}</div>` : ''}
     `;
     container.appendChild(div);

@@ -763,6 +763,7 @@ function renderHistoryScreen() {
       <div class="history-item-meta">${e.date} · ${e.series === 'tarot' ? '塔羅牌' : '神明訊息牌'} · ${e.spreadName}</div>
       ${e.question ? `<div class="history-item-q">「${e.question}」</div>` : ''}
       <div class="history-item-cards">${e.selections.map(s => s.cardName).join(' · ')}</div>
+      <button class="history-item-delete" onclick="event.stopPropagation(); deleteHistory(${e.id})">刪除</button>
     </div>
   `).join('');
 }
@@ -848,6 +849,12 @@ function downloadHistory() {
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   a.download = `Triple.Cell_抽牌紀錄.csv`;
   a.click();
+}
+
+function deleteHistory(id) {
+  const list = loadHistory().filter(e => e.id !== id);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+  renderHistoryScreen();
 }
 
 function clearHistory() {

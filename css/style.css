@@ -845,6 +845,7 @@ body:has(#screen-launch:not(.hidden)) .site-footer { display: none; }
   transition: background .15s;
 }
 .site-menu-series-btn:hover { background: var(--color-surface-low); }
+.site-menu-series-link { display: block; text-decoration: none; }
 
 .site-menu-divider {
   height: 1px;

@@ -643,12 +643,12 @@ body {
   white-space: pre-line;
 }
 .meaning-label {
-  display: inline-block;
+  display: block;
   font-size: 11px;
   font-weight: 600;
   color: var(--color-text-disabled);
   letter-spacing: 1px;
-  margin-right: 6px;
+  margin-bottom: 4px;
 }
 .meaning-oracle {
   margin-top: 14px;
@@ -1167,4 +1167,108 @@ body:has(#screen-launch:not(.hidden)) .site-footer {
   .board-toolbar { flex-wrap: nowrap; gap: 10px; }
   .btn { padding: 9px 16px; font-size: 13px; }
   .series-card { padding: 32px 20px; }
+}
+
+/* ── Board Question Input ── */
+.board-question-wrap {
+  width: 100%;
+  max-width: 760px;
+  margin-bottom: 8px;
+}
+.board-question-input {
+  width: 100%;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-surface-low);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--color-text);
+  letter-spacing: 0.5px;
+  outline: none;
+  transition: border-color .15s;
+}
+.board-question-input:focus { border-color: var(--color-primary-light); }
+.board-question-input::placeholder { color: var(--color-text-disabled); }
+
+/* ── Prepare Question Textarea ── */
+.prepare-question-input {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-surface-low);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--color-text);
+  resize: none;
+  outline: none;
+  transition: border-color .15s;
+  letter-spacing: 0.5px;
+  line-height: 1.6;
+}
+.prepare-question-input:focus { border-color: var(--color-primary-light); }
+.prepare-question-input::placeholder { color: var(--color-text-disabled); }
+
+/* ── Meanings Question Display ── */
+.meanings-question {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: center;
+  letter-spacing: 1px;
+  padding: 13px 20px;
+  background: var(--color-surface);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  line-height: 1.7;
+}
+
+/* ── History Screen ── */
+.history-list {
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+.history-empty {
+  font-size: 14px;
+  color: var(--color-text-disabled);
+  text-align: center;
+  padding: 48px 0;
+  letter-spacing: 1px;
+}
+.history-item {
+  background: var(--color-surface);
+  border-radius: 14px;
+  padding: 18px 22px;
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
+  transition: transform .15s, box-shadow .15s;
+}
+.history-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+}
+.history-item-meta {
+  font-size: 11px;
+  color: var(--color-text-disabled);
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+}
+.history-item-q {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+.history-item-cards {
+  font-size: 13px;
+  color: var(--color-primary);
+  letter-spacing: 0.5px;
 }

@@ -42,10 +42,13 @@ function getPositionedDesc(card, position) {
 const state = {
   series: null,
   spread: null,
-  deck: [],          // all cards shuffled
-  selections: [],    // { positionIndex, card } in order selected
-  currentPos: 0,     // which position we're filling next
+  deck: [],
+  selections: [],
+  currentPos: 0,
   usedIds: new Set(),
+  question: '',
+  saved: false,      // 已手動儲存過
+  fromHistory: false, // 從歷史還原
 };
 
 // ── DOM helpers ──
@@ -53,7 +56,7 @@ const $ = id => document.getElementById(id);
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
 const showOnly = id => {
-  ['screen-launch', 'screen-home', 'screen-spread', 'screen-seasons-confirm', 'screen-board'].forEach(hide);
+  ['screen-launch', 'screen-home', 'screen-spread', 'screen-seasons-confirm', 'screen-board', 'screen-history'].forEach(hide);
   show(id);
 };
 
@@ -68,7 +71,7 @@ function shuffle(arr) {
 
 // ── Navigation ──
 function goHome() {
-  Object.assign(state, { series: null, spread: null, deck: [], selections: [], currentPos: 0, usedIds: new Set() });
+  Object.assign(state, { series: null, spread: null, deck: [], selections: [], currentPos: 0, usedIds: new Set(), question: '', saved: false });
   showOnly('screen-home');
 }
 
@@ -120,13 +123,22 @@ function startSelection(showPrepare = true) {
   $('board-title').textContent = state.spread.name;
   $('board-sub').innerHTML = (state.spread.subtitle || '').replace(/\n/g, '<br>');
 
+  // 同步題目輸入欄
+  const qInput = $('board-question-input');
+  if (qInput) qInput.value = state.question;
+
   // 只有第一次進入才顯示準備 overlay
   if (showPrepare) {
     $('prepare-overlay').classList.remove('hidden');
+    // 同步 prepare textarea
+    const pq = $('prepare-question');
+    if (pq) pq.value = state.question;
   } else {
     $('prepare-overlay').classList.add('hidden');
   }
 
+  state.saved = false;
+  state.fromHistory = false;
   renderPositionSlots();
   renderCardPool();
   updateProgress();
@@ -292,10 +304,32 @@ function resetSelection() {
 function showMeanings(autoScroll = true) {
   show('meanings-section');
   renderMeanings();
+  // 從歷史還原或已儲存過：隱藏儲存按鈕
+  const saveBtn = $('btn-save-record');
+  if (saveBtn) {
+    if (state.fromHistory || state.saved) {
+      saveBtn.classList.add('hidden');
+    } else {
+      saveBtn.classList.remove('hidden');
+      saveBtn.textContent = '儲存這次紀錄';
+      saveBtn.disabled = false;
+    }
+  }
   if (autoScroll) $('meanings-section').scrollIntoView({ behavior: 'smooth' });
 }
 
 function renderMeanings() {
+  // 顯示題目
+  const qEl = $('meanings-question');
+  if (qEl) {
+    if (state.question) {
+      qEl.textContent = `「${state.question}」`;
+      qEl.classList.remove('hidden');
+    } else {
+      qEl.classList.add('hidden');
+    }
+  }
+
   const disclaimer = $('meanings-disclaimer');
   if (state.series === 'tarot') {
     disclaimer.innerHTML = '如果你不會解塔羅，歡迎透過閱讀文字，去感受跟進行自我提問，來為自己找到答案。<br><br>任何的訊息，都只是給予我們去尋找別的切角的可能，<br><br>而不是生命只能是這方向的劇本，因為我們永遠擁有自己生命裡的選擇權。';
@@ -318,7 +352,7 @@ function renderMeanings() {
         <span class="meaning-name">${card.name}</span>
       </div>
       <div class="meaning-keyword">${card.meaning || ''}</div>
-      ${cardText ? `<div class="meaning-desc"><span class="meaning-label">牌面文字</span>${cardText}</div>` : ''}
+      ${cardText ? `<div class="meaning-desc"><span class="meaning-label">牌面文字</span>${cardText.replace(/\n/g, '，')}</div>` : ''}
       ${oracleText ? `<div class="meaning-oracle">${oracleText}</div>` : ''}
     `;
     container.appendChild(div);
@@ -666,6 +700,194 @@ function copyText() {
     btn.textContent = '複製失敗';
     setTimeout(() => { btn.textContent = '複製文字'; }, 2000);
   });
+}
+
+// ── Question helpers ──
+function captureQuestion() {
+  const pq = $('prepare-question');
+  if (pq) state.question = pq.value.trim();
+  const bi = $('board-question-input');
+  if (bi) bi.value = state.question;
+}
+
+function updateQuestion(value) {
+  state.question = value.trim();
+}
+
+// ── History (localStorage) ──
+const HISTORY_KEY = 'tc_history';
+
+function saveHistory() {
+  if (!state.selections.some(Boolean)) return;
+  const list = loadHistory();
+  const entry = {
+    id: Date.now(),
+    date: new Date().toLocaleDateString('zh-TW'),
+    series: state.series,
+    spreadKey: state.spread._key,
+    spreadName: state.spread.name,
+    question: state.question,
+    selections: state.selections.map((card, i) => card ? {
+      position: state.spread.positions[i],
+      cardId: card.id,
+      cardName: card.name,
+      cardFile: card.file,
+    } : null).filter(Boolean),
+  };
+  list.unshift(entry);
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 60))); } catch(e) {}
+}
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
+}
+
+function showHistoryScreen() {
+  showOnly('screen-history');
+  renderHistoryScreen();
+}
+
+function renderHistoryScreen() {
+  const container = $('history-list');
+  if (!container) return;
+  const list = loadHistory();
+  if (!list.length) {
+    container.innerHTML = '<p class="history-empty">還沒有儲存任何紀錄</p>';
+    return;
+  }
+  container.innerHTML = list.map(e => `
+    <div class="history-item" onclick="viewHistory(${e.id})">
+      <div class="history-item-meta">${e.date} · ${e.series === 'tarot' ? '塔羅牌' : '神明訊息牌'} · ${e.spreadName}</div>
+      ${e.question ? `<div class="history-item-q">「${e.question}」</div>` : ''}
+      <div class="history-item-cards">${e.selections.map(s => s.cardName).join(' · ')}</div>
+    </div>
+  `).join('');
+}
+
+function manualSave() {
+  if (!state.selections.some(Boolean)) return;
+  saveHistory();
+  state.saved = true;
+  const btn = $('btn-save-record');
+  if (btn) {
+    btn.textContent = '✓ 已儲存';
+    btn.disabled = true;
+  }
+}
+
+function viewHistory(id) {
+  const entry = loadHistory().find(e => e.id === id);
+  if (!entry) return;
+  $('site-menu-panel').classList.remove('open');
+
+  state.series = entry.series;
+  state.question = entry.question || '';
+  state.saved = true;
+  state.fromHistory = true;
+
+  if (entry.series === 'deity') {
+    state.spread = { name: '神明訊息牌', subtitle: '抽一張，也許那些讓你糾結的，\n會在這裡找到新的角度去看待這件事', count: 1, positions: ['神明的訊息'], _key: 'deity' };
+  } else {
+    state.spread = { ...SPREADS[entry.spreadKey], _key: entry.spreadKey };
+  }
+
+  const pool = entry.series === 'tarot' ? TAROT_CARDS : DEITY_CARDS;
+  state.selections = entry.selections.map(s => pool.find(c => c.id === s.cardId) || null);
+  state.currentPos = state.selections.filter(Boolean).length;
+  state.usedIds = new Set(state.selections.filter(Boolean).map(c => c.id));
+
+  showOnly('screen-board');
+  $('board-title').textContent = state.spread.name;
+  $('board-sub').innerHTML = (state.spread.subtitle || '').replace(/\n/g, '<br>');
+  $('board-question-input').value = state.question;
+  $('prepare-overlay').classList.add('hidden');
+  $('card-pool-wrap').classList.add('pool-done');
+  hide('swipe-hint');
+  hide('btn-reveal-meanings');
+  hide('btn-reset-selection');
+  $('progress-text').textContent = `歷史紀錄 ${entry.date}`;
+
+  renderPositionSlots();
+
+  // 填入牌卡
+  const folder = entry.series === 'tarot' ? 'images/tarot/' : 'images/deity/';
+  state.selections.forEach((card, i) => {
+    if (!card) return;
+    const slot = $(`pos-slot-${i}`);
+    if (!slot) return;
+    const posCard = slot.querySelector('.pos-card');
+    posCard.classList.remove('empty');
+    const imgSrc = `${folder}${card.file}`;
+    posCard.innerHTML = `<img src="${imgSrc}" alt="${card.name}"${entry.series === 'deity' ? ' class="deity-img"' : ''} onclick="openLightbox(this.src)" style="cursor:pointer">`;
+    let nameEl = slot.querySelector('.pos-card-name-below');
+    if (!nameEl) { nameEl = document.createElement('div'); nameEl.className = 'pos-card-name-below'; slot.appendChild(nameEl); }
+    nameEl.textContent = card.name;
+  });
+
+  showMeanings(true, false);
+}
+
+function downloadHistory() {
+  const list = loadHistory();
+  if (!list.length) { alert('還沒有紀錄可以下載'); return; }
+  const rows = [['日期', '牌組', '排陣', '題目', '牌卡']];
+  list.forEach(e => {
+    rows.push([
+      e.date,
+      e.series === 'tarot' ? '塔羅牌' : '神明訊息牌',
+      e.spreadName,
+      e.question || '',
+      e.selections.map(s => `${s.position}：${s.cardName}`).join('；'),
+    ]);
+  });
+  const csv = '﻿' + rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `Triple.Cell_抽牌紀錄.csv`;
+  a.click();
+}
+
+function clearHistory() {
+  if (!confirm('確定要清除全部抽牌紀錄嗎？')) return;
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistoryScreen();
+}
+
+function exportHistoryJSON() {
+  const list = loadHistory();
+  if (!list.length) { alert('還沒有紀錄可以備份'); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(list, null, 2)], { type: 'application/json' }));
+  a.download = `Triple.Cell_抽牌紀錄備份.json`;
+  a.click();
+}
+
+function importHistoryJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const imported = JSON.parse(evt.target.result);
+        if (!Array.isArray(imported)) throw new Error();
+        const existing = loadHistory();
+        const existingIds = new Set(existing.map(h => h.id));
+        const newEntries = imported.filter(h => h.id && h.spreadName && Array.isArray(h.selections) && !existingIds.has(h.id));
+        const merged = [...newEntries, ...existing].sort((a, b) => b.id - a.id).slice(0, 200);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
+        renderHistoryScreen();
+        alert(`匯入完成，新增 ${newEntries.length} 筆紀錄`);
+      } catch {
+        alert('匯入失敗，請確認是從這個 App 匯出的 JSON 備份檔');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
 // ── Init ──

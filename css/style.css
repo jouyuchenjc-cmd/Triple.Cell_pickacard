@@ -650,6 +650,11 @@ body {
   letter-spacing: 1px;
   margin-bottom: 4px;
 }
+.meaning-label--inline {
+  display: inline-block;
+  margin-bottom: 0;
+  margin-right: 6px;
+}
 .meaning-oracle {
   margin-top: 14px;
   font-size: 14px;

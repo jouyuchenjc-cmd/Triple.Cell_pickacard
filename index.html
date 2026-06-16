@@ -71,6 +71,30 @@
     <div id="spread-options"></div>
   </section>
 
+  <!-- ── 出遠門：日期選擇 Overlay ── -->
+  <div id="travel-overlay" class="travel-overlay hidden">
+    <div class="travel-body">
+      <div class="prepare-ornament">✦  ✦  ✦</div>
+      <h2 class="travel-title">出遠門</h2>
+      <p class="travel-desc">選擇旅行日期，每天抽一張牌<br>最多 30 天，超過建議快到了再抽下一輪</p>
+      <div class="travel-dates">
+        <div class="travel-date-field">
+          <label class="travel-date-label">出發日</label>
+          <input type="date" id="travel-start" class="travel-date-input" oninput="updateTravelDays()">
+        </div>
+        <div class="travel-date-sep">～</div>
+        <div class="travel-date-field">
+          <label class="travel-date-label">回程日</label>
+          <input type="date" id="travel-end" class="travel-date-input" oninput="updateTravelDays()">
+        </div>
+      </div>
+      <div id="travel-days-display" class="travel-days-display"></div>
+      <p id="travel-error" class="travel-error hidden"></p>
+      <button class="btn btn-cta" id="btn-travel-start" onclick="startTravelSpread()" disabled>開始抽牌</button>
+      <button class="btn btn-ghost" style="margin-top:12px" onclick="closeTravelOverlay()">取消</button>
+    </div>
+  </div>
+
   <!-- ── 四季排陣：節氣確認 ── -->
   <section id="screen-seasons-confirm" class="screen hidden">
     <div class="topbar">
@@ -190,6 +214,15 @@
     <div id="history-list" class="history-list"></div>
   </section>
 
+  <!-- ── 更新紀錄分頁 ── -->
+  <section id="screen-changelog" class="screen hidden">
+    <div class="topbar">
+      <button class="btn-back" onclick="showOnly('screen-home')">← 返回</button>
+    </div>
+    <h2 class="screen-title">更新紀錄</h2>
+    <div id="changelog-list" class="changelog-list"></div>
+  </section>
+
   <!-- ── 牌卡放大 Lightbox ── -->
   <div id="card-lightbox" class="card-lightbox hidden" onclick="this.classList.add('hidden')">
     <button class="lightbox-close" onclick="event.stopPropagation();document.getElementById('card-lightbox').classList.add('hidden')">✕</button>
@@ -238,6 +271,18 @@
           <a class="site-menu-series-btn site-menu-series-link" href="https://triplecell.notion.site/7adcb4821df741559a198fcb6494153b?pvs=143" target="_blank" rel="noopener">
             📖 塔羅牌義
           </a>
+        </div>
+      </div>
+
+      <div class="site-menu-divider"></div>
+
+      <div class="site-menu-section">
+        <p class="site-menu-label">更新紀錄</p>
+        <div class="site-menu-series">
+          <div id="menu-latest-update" class="site-menu-update-latest"></div>
+          <button class="site-menu-series-btn" onclick="document.getElementById('site-menu-panel').classList.remove('open'); showChangelogScreen()">
+            🔍 查看全部更新
+          </button>
         </div>
       </div>
 

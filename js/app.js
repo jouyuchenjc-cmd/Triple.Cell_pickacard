@@ -56,9 +56,14 @@ const $ = id => document.getElementById(id);
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
 const showOnly = id => {
-  ['screen-launch', 'screen-home', 'screen-spread', 'screen-seasons-confirm', 'screen-board', 'screen-history'].forEach(hide);
+  ['screen-launch', 'screen-home', 'screen-spread', 'screen-seasons-confirm', 'screen-board', 'screen-history', 'screen-changelog'].forEach(hide);
   show(id);
 };
+
+const CHANGELOG = [
+  { date: '2026-06-16', content: '新增出遠門牌陣（自選日期，每天一張，最多 30 天）、更新紀錄分頁與漢堡預覽、刪除單筆抽牌紀錄、漢堡選單新增資料庫與更新紀錄區塊、修正打字放大畫面問題' },
+  { date: '2026-06-15', content: '新增塔羅牌義連結、神明訊息牌牌義顯示修正（標籤樣式與換行保留）、塔羅逆位牌義（建置中）' },
+];
 
 function shuffle(arr) {
   const a = [...arr];
@@ -109,6 +114,98 @@ function renderSpreadOptions() {
     });
     container.appendChild(el);
   });
+
+  // 出遠門（特殊牌陣，需選日期）
+  const travelEl = document.createElement('button');
+  travelEl.className = 'spread-card';
+  travelEl.innerHTML = `
+    <div class="spread-count">✈</div>
+    <div class="spread-name">出遠門</div>
+    <div class="spread-divider"></div>
+    <div class="spread-sub">選擇日期，每天一張牌</div>
+  `;
+  travelEl.addEventListener('click', openTravelOverlay);
+  container.appendChild(travelEl);
+}
+
+// ── Travel spread ──
+function formatDateInput(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function formatTravelDate(date) {
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+  return `${date.getMonth() + 1}/${date.getDate()}（${weekdays[date.getDay()]}）`;
+}
+
+function parseDateInput(val) {
+  const [y, m, d] = val.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function openTravelOverlay() {
+  const today = new Date();
+  const end = new Date(today);
+  end.setDate(today.getDate() + 6);
+  $('travel-start').value = formatDateInput(today);
+  $('travel-end').value = formatDateInput(end);
+  $('travel-overlay').classList.remove('hidden');
+  updateTravelDays();
+}
+
+function closeTravelOverlay() {
+  $('travel-overlay').classList.add('hidden');
+}
+
+function updateTravelDays() {
+  const startVal = $('travel-start').value;
+  const endVal = $('travel-end').value;
+  const display = $('travel-days-display');
+  const error = $('travel-error');
+  const btn = $('btn-travel-start');
+
+  if (!startVal || !endVal) { display.textContent = ''; btn.disabled = true; return; }
+
+  const start = parseDateInput(startVal);
+  const end = parseDateInput(endVal);
+  const diff = Math.round((end - start) / 86400000) + 1;
+
+  if (diff < 1) {
+    display.textContent = '';
+    error.textContent = '回程日不能早於出發日';
+    error.classList.remove('hidden');
+    btn.disabled = true;
+    return;
+  }
+
+  error.classList.add('hidden');
+  const days = Math.min(diff, 30);
+  display.textContent = `共 ${days} 天${diff > 30 ? '（超過 30 天只抽前 30 天）' : ''}`;
+  btn.disabled = false;
+}
+
+function startTravelSpread() {
+  const start = parseDateInput($('travel-start').value);
+  const end = parseDateInput($('travel-end').value);
+  const positions = [];
+  const cur = new Date(start);
+  while (cur <= end && positions.length < 30) {
+    positions.push(formatTravelDate(new Date(cur)));
+    cur.setDate(cur.getDate() + 1);
+  }
+  state.spread = {
+    name: '出遠門',
+    subtitle: `${formatTravelDate(start)} ～ ${formatTravelDate(end)}`,
+    count: positions.length,
+    positions,
+    layout: 'row',
+    _key: 'travel',
+  };
+  closeTravelOverlay();
+  startSelection();
 }
 
 // ── Start selection mode ──
@@ -750,6 +847,29 @@ function showHistoryScreen() {
   renderHistoryScreen();
 }
 
+function showChangelogScreen() {
+  showOnly('screen-changelog');
+  renderChangelogScreen();
+}
+
+function renderChangelogScreen() {
+  const container = $('changelog-list');
+  if (!container) return;
+  container.innerHTML = CHANGELOG.map(e => `
+    <div class="changelog-item">
+      <div class="changelog-date">${e.date}</div>
+      <div class="changelog-content">${e.content}</div>
+    </div>
+  `).join('');
+}
+
+function renderChangelogLatest() {
+  const el = $('menu-latest-update');
+  if (!el || !CHANGELOG.length) return;
+  const e = CHANGELOG[0];
+  el.innerHTML = `<span class="changelog-latest-date">${e.date}</span><span class="changelog-latest-content">${e.content}</span>`;
+}
+
 function renderHistoryScreen() {
   const container = $('history-list');
   if (!container) return;
@@ -791,6 +911,16 @@ function viewHistory(id) {
 
   if (entry.series === 'deity') {
     state.spread = { name: '神明訊息牌', subtitle: '抽一張，也許那些讓你糾結的，\n會在這裡找到新的角度去看待這件事', count: 1, positions: ['神明的訊息'], _key: 'deity' };
+  } else if (entry.spreadKey === 'travel') {
+    const positions = entry.selections.map(s => s.position);
+    state.spread = {
+      name: entry.spreadName,
+      subtitle: `${positions[0]} ～ ${positions[positions.length - 1]}`,
+      count: positions.length,
+      positions,
+      layout: 'row',
+      _key: 'travel',
+    };
   } else {
     state.spread = { ...SPREADS[entry.spreadKey], _key: entry.spreadKey };
   }
@@ -916,4 +1046,5 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-reveal-meanings').addEventListener('click', showMeanings);
   $('btn-save-image').addEventListener('click', saveImage);
   $('btn-copy-text').addEventListener('click', copyText);
+  renderChangelogLatest();
 });

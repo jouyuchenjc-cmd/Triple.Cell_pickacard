@@ -61,7 +61,7 @@ const showOnly = id => {
 };
 
 const CHANGELOG = [
-  { date: '2026-06-16', content: '新增出遠門牌陣（自選日期，每天一張，最多 30 天）、更新紀錄分頁與漢堡預覽、刪除單筆抽牌紀錄、漢堡選單新增資料庫與更新紀錄區塊、修正打字放大畫面問題' },
+  { date: '2026-06-16', content: '新增出遠門牌陣（自選日期，每天一張，最多 30 天）、更新紀錄分頁與預覽、刪除單筆抽牌紀錄、漢堡選單新增資料庫與更新紀錄區塊、修正打字放大畫面問題' },
   { date: '2026-06-15', content: '新增塔羅牌義連結、神明訊息牌牌義顯示修正（標籤樣式與換行保留）、塔羅逆位牌義（建置中）' },
 ];
 
@@ -119,7 +119,7 @@ function renderSpreadOptions() {
   const travelEl = document.createElement('button');
   travelEl.className = 'spread-card';
   travelEl.innerHTML = `
-    <div class="spread-count">✈</div>
+    <div class="spread-count"><svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
     <div class="spread-name">出遠門</div>
     <div class="spread-divider"></div>
     <div class="spread-sub">選擇日期，每天一張牌</div>

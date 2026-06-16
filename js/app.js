@@ -58,6 +58,7 @@ const hide = id => $(id).classList.add('hidden');
 const showOnly = id => {
   ['screen-launch', 'screen-home', 'screen-spread', 'screen-seasons-confirm', 'screen-board', 'screen-history', 'screen-changelog'].forEach(hide);
   show(id);
+  window.scrollTo(0, 0);
 };
 
 const CHANGELOG = [

@@ -345,8 +345,10 @@
   <script src="js/deity-data.js"></script>
   <script src="js/app.js"></script>
   <script>
-    function openLightbox(src) {
-      document.getElementById('lightbox-img').src = src;
+    function openLightbox(src, reversed) {
+      const img = document.getElementById('lightbox-img');
+      img.src = src;
+      img.style.transform = reversed ? 'rotate(180deg)' : '';
       document.getElementById('card-lightbox').classList.remove('hidden');
     }
     // 阻止圖片右鍵另存

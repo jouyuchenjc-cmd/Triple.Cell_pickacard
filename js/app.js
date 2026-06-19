@@ -338,7 +338,7 @@ function pickCard(card, el) {
   const imgSrc = `${folder}${card.file}`;
   const isDeity = state.series === 'deity';
   const rotateStyle = isReversed ? ' style="transform:rotate(180deg);cursor:pointer"' : ' style="cursor:pointer"';
-  posCard.innerHTML = `<img src="${imgSrc}" alt="${card.name}"${isDeity ? ' class="deity-img"' : ''}${rotateStyle} onclick="openLightbox(this.src)">`;
+  posCard.innerHTML = `<img src="${imgSrc}" alt="${card.name}"${isDeity ? ' class="deity-img"' : ''}${rotateStyle} onclick="openLightbox(this.src, this.style.transform.includes('rotate'))">`;
   posCard.dataset.imgSrc = imgSrc;
 
   // 顯示牌名在槽位下方
@@ -978,7 +978,7 @@ function viewHistory(id) {
     posCard.classList.remove('empty');
     const imgSrc = `${folder}${card.file}`;
     const rotStyle = card._isReversed ? 'transform:rotate(180deg);cursor:pointer' : 'cursor:pointer';
-    posCard.innerHTML = `<img src="${imgSrc}" alt="${card.name}"${entry.series === 'deity' ? ' class="deity-img"' : ''} onclick="openLightbox(this.src)" style="${rotStyle}">`;
+    posCard.innerHTML = `<img src="${imgSrc}" alt="${card.name}"${entry.series === 'deity' ? ' class="deity-img"' : ''} onclick="openLightbox(this.src, this.style.transform.includes('rotate'))" style="${rotStyle}">`;
     let nameEl = slot.querySelector('.pos-card-name-below');
     if (!nameEl) { nameEl = document.createElement('div'); nameEl.className = 'pos-card-name-below'; slot.appendChild(nameEl); }
     nameEl.textContent = card.name;

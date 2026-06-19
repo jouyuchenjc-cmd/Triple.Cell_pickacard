@@ -62,8 +62,9 @@ const showOnly = id => {
 };
 
 const CHANGELOG = [
+  { date: '2026-06-20', content: '新增塔羅牌逆位功能：抽牌時有 50% 機率出現逆位，逆位牌圖片倒置顯示，並附有逆位專屬關鍵字、牌面文字與訊息，全 78 張牌均已收錄逆位內容' },
   { date: '2026-06-16', content: '新增出遠門牌陣（自選日期，每天一張，最多 30 天）、更新紀錄分頁與預覽、刪除單筆抽牌紀錄、漢堡選單新增資料庫與更新紀錄區塊、修正打字放大畫面問題' },
-  { date: '2026-06-15', content: '新增塔羅牌義連結、神明訊息牌牌義顯示修正（標籤樣式與換行保留）、塔羅逆位牌義（建置中）' },
+  { date: '2026-06-15', content: '新增塔羅牌義連結、神明訊息牌牌義顯示修正（標籤樣式與換行保留）' },
 ];
 
 function shuffle(arr) {
@@ -322,9 +323,12 @@ function pickCard(card, el) {
   state.usedIds.add(card.id);
   el.classList.add('used');
 
+  // 50% chance of reversed (tarot only)
+  const isReversed = state.series === 'tarot' && Math.random() < 0.5;
+
   // Fill position slot
   const posIdx = state.currentPos;
-  state.selections[posIdx] = card;
+  state.selections[posIdx] = { ...card, _isReversed: isReversed };
 
   const slot = $(`pos-slot-${posIdx}`);
   const posCard = slot.querySelector('.pos-card');
@@ -333,7 +337,8 @@ function pickCard(card, el) {
   const folder = state.series === 'tarot' ? 'images/tarot/' : 'images/deity/';
   const imgSrc = `${folder}${card.file}`;
   const isDeity = state.series === 'deity';
-  posCard.innerHTML = `<img src="${imgSrc}" alt="${card.name}"${isDeity ? ' class="deity-img"' : ''} onclick="openLightbox(this.src)" style="cursor:pointer">`;
+  const rotateStyle = isReversed ? ' style="transform:rotate(180deg);cursor:pointer"' : ' style="cursor:pointer"';
+  posCard.innerHTML = `<img src="${imgSrc}" alt="${card.name}"${isDeity ? ' class="deity-img"' : ''}${rotateStyle} onclick="openLightbox(this.src)">`;
   posCard.dataset.imgSrc = imgSrc;
 
   // 顯示牌名在槽位下方
@@ -440,16 +445,19 @@ function renderMeanings() {
   state.selections.forEach((card, i) => {
     if (!card) return;
     const pos = state.spread.positions[i];
+    const rev = !!card._isReversed;
     const div = document.createElement('div');
     div.className = 'meaning-card';
-    const cardText = card.desc || card.message || '';
-    const oracleText = card.oracle || '';
+    const cardText = rev ? (card.descReversed || card.desc || card.message || '') : (card.desc || card.message || '');
+    const oracleText = rev ? (card.oracleReversed || card.oracle || '') : (card.oracle || '');
+    const keyword = rev ? (card.meaningReversed || card.meaning || '') : (card.meaning || '');
+    const nameLabel = rev ? `${card.name}　<span class="reversed-tag">逆位</span>` : card.name;
     div.innerHTML = `
       <div class="meaning-header">
         <span class="meaning-pos">${pos}</span>
-        <span class="meaning-name">${card.name}</span>
+        <span class="meaning-name">${nameLabel}</span>
       </div>
-      <div class="meaning-keyword">${card.meaning || ''}</div>
+      <div class="meaning-keyword">${keyword}</div>
       ${cardText ? (state.series === 'tarot'
         ? `<div class="meaning-desc"><span class="meaning-label">牌面文字</span>${cardText.replace(/\n/g, '，')}</div>`
         : `<div class="meaning-desc"><span class="meaning-label meaning-label--inline">牌面文字</span>${cardText}</div>`
@@ -668,7 +676,15 @@ async function saveImage() {
         if (img) {
           ctx.save();
           rr(cx+IMG_INSET, y+IMG_INSET, cardW-IMG_INSET*2, cardH-IMG_INSET*2, 6); ctx.clip();
-          ctx.drawImage(img, cx+IMG_INSET, y+IMG_INSET, cardW-IMG_INSET*2, cardH-IMG_INSET*2);
+          const selCard = state.selections[i];
+          if (selCard && selCard._isReversed) {
+            const ix = cx+IMG_INSET, iy = y+IMG_INSET, iw = cardW-IMG_INSET*2, ih = cardH-IMG_INSET*2;
+            ctx.translate(ix + iw/2, iy + ih/2);
+            ctx.rotate(Math.PI);
+            ctx.drawImage(img, -iw/2, -ih/2, iw, ih);
+          } else {
+            ctx.drawImage(img, cx+IMG_INSET, y+IMG_INSET, cardW-IMG_INSET*2, cardH-IMG_INSET*2);
+          }
           ctx.restore();
         } else {
           ctx.fillStyle = '#D9D3C7';
@@ -788,9 +804,13 @@ function copyText() {
   state.selections.forEach((card, i) => {
     if (!card) return;
     const pos = state.spread.positions[i];
-    lines.push(`▍${pos}・${card.name}`);
-    if (card.meaning) lines.push(card.meaning);
-    lines.push(card.desc || card.message || '');
+    const rev = !!card._isReversed;
+    const nameLine = rev ? `${card.name}（逆位）` : card.name;
+    const keyword = rev ? (card.meaningReversed || card.meaning || '') : (card.meaning || '');
+    const desc = rev ? (card.descReversed || card.desc || card.message || '') : (card.desc || card.message || '');
+    lines.push(`▍${pos}・${nameLine}`);
+    if (keyword) lines.push(keyword);
+    lines.push(desc);
     lines.push('');
   });
 
@@ -833,6 +853,7 @@ function saveHistory() {
       cardId: card.id,
       cardName: card.name,
       cardFile: card.file,
+      isReversed: !!card._isReversed,
     } : null).filter(Boolean),
   };
   list.unshift(entry);
@@ -927,7 +948,10 @@ function viewHistory(id) {
   }
 
   const pool = entry.series === 'tarot' ? TAROT_CARDS : DEITY_CARDS;
-  state.selections = entry.selections.map(s => pool.find(c => c.id === s.cardId) || null);
+  state.selections = entry.selections.map(s => {
+    const c = pool.find(c => c.id === s.cardId);
+    return c ? { ...c, _isReversed: !!s.isReversed } : null;
+  });
   state.currentPos = state.selections.filter(Boolean).length;
   state.usedIds = new Set(state.selections.filter(Boolean).map(c => c.id));
 
@@ -953,7 +977,8 @@ function viewHistory(id) {
     const posCard = slot.querySelector('.pos-card');
     posCard.classList.remove('empty');
     const imgSrc = `${folder}${card.file}`;
-    posCard.innerHTML = `<img src="${imgSrc}" alt="${card.name}"${entry.series === 'deity' ? ' class="deity-img"' : ''} onclick="openLightbox(this.src)" style="cursor:pointer">`;
+    const rotStyle = card._isReversed ? 'transform:rotate(180deg);cursor:pointer' : 'cursor:pointer';
+    posCard.innerHTML = `<img src="${imgSrc}" alt="${card.name}"${entry.series === 'deity' ? ' class="deity-img"' : ''} onclick="openLightbox(this.src)" style="${rotStyle}">`;
     let nameEl = slot.querySelector('.pos-card-name-below');
     if (!nameEl) { nameEl = document.createElement('div'); nameEl.className = 'pos-card-name-below'; slot.appendChild(nameEl); }
     nameEl.textContent = card.name;

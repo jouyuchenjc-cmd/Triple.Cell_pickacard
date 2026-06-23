@@ -95,6 +95,37 @@
     </div>
   </div>
 
+  <!-- ── 自訂牌陣設定 Overlay ── -->
+  <div id="custom-spread-overlay" class="travel-overlay hidden">
+    <div class="travel-body">
+      <div class="prepare-ornament">✦  ✦  ✦</div>
+      <h2 class="travel-title">自訂牌陣</h2>
+      <p class="travel-desc">設定你想要的張數，<br>並為每個位置寫下你想問的問題</p>
+
+      <div class="custom-spread-field">
+        <label class="travel-date-label">牌陣名稱</label>
+        <input type="text" id="custom-spread-name" class="travel-date-input custom-spread-wide-input" placeholder="例如：我的牌陣">
+      </div>
+
+      <div class="custom-spread-field">
+        <label class="travel-date-label">抽幾張牌</label>
+        <input type="number" id="custom-spread-count" class="travel-date-input custom-spread-wide-input" min="1" max="12" value="3" oninput="renderCustomSpreadPositions()">
+      </div>
+
+      <div id="custom-spread-positions" class="custom-spread-positions"></div>
+
+      <label class="custom-spread-save-toggle">
+        <input type="checkbox" id="custom-spread-save-toggle">
+        儲存這個牌陣，下次直接使用
+      </label>
+
+      <p id="custom-spread-error" class="travel-error hidden"></p>
+
+      <button class="btn btn-cta" id="btn-custom-spread-start" onclick="startCustomSpread()">開始抽牌</button>
+      <button class="btn btn-ghost" style="margin-top:12px" onclick="closeCustomSpreadOverlay()">取消</button>
+    </div>
+  </div>
+
   <!-- ── 四季排陣：節氣確認 ── -->
   <section id="screen-seasons-confirm" class="screen hidden">
     <div class="topbar">

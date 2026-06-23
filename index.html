@@ -109,7 +109,20 @@
 
       <div class="custom-spread-field">
         <label class="travel-date-label">抽幾張牌</label>
-        <input type="number" id="custom-spread-count" class="travel-date-input custom-spread-wide-input" min="1" max="12" value="3" oninput="renderCustomSpreadPositions()">
+        <select id="custom-spread-count" class="travel-date-input custom-spread-wide-input" onchange="renderCustomSpreadPositions()">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12">12</option>
+        </select>
       </div>
 
       <div id="custom-spread-positions" class="custom-spread-positions"></div>

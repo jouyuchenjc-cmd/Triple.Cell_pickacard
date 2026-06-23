@@ -62,6 +62,7 @@ const showOnly = id => {
 };
 
 const CHANGELOG = [
+  { date: '2026-06-23', content: '新增自訂牌陣功能：可自訂張數（最多 12 張）與每個位置的提問內容，能儲存供下次直接使用' },
   { date: '2026-06-20', content: '新增塔羅逆位，包含對應關鍵字與專屬訊息，若抽中同時且會以逆位方式呈現牌面' },
   { date: '2026-06-16', content: '新增出遠門牌陣（自選日期，每天一張，最多 30 天）、更新紀錄分頁與預覽、刪除單筆抽牌紀錄、漢堡選單新增資料庫與更新紀錄區塊、修正打字放大畫面問題' },
   { date: '2026-06-15', content: '新增塔羅牌義連結、神明訊息牌牌義顯示修正（標籤樣式與換行保留）' },
@@ -138,8 +139,15 @@ function renderSpreadOptions() {
       <div class="spread-name">${saved.name}</div>
       <div class="spread-divider"></div>
       <div class="spread-sub">${saved.positions.join('・')}</div>
-      <span class="custom-spread-delete">刪除</span>
+      <span class="custom-spread-actions">
+        <span class="custom-spread-share">分享</span>
+        <span class="custom-spread-delete">刪除</span>
+      </span>
     `;
+    el.querySelector('.custom-spread-share').addEventListener('click', (e) => {
+      e.stopPropagation();
+      shareCustomSpread(saved.id);
+    });
     el.querySelector('.custom-spread-delete').addEventListener('click', (e) => {
       e.stopPropagation();
       deleteSavedCustomSpread(saved.id);
@@ -345,6 +353,60 @@ function deleteSavedCustomSpread(id) {
   const list = loadCustomSpreads().filter(s => s.id !== id);
   try { localStorage.setItem(CUSTOM_SPREADS_KEY, JSON.stringify(list)); } catch (e) {}
   renderSpreadOptions();
+}
+
+// 分享單一自訂牌陣（輸出檔案格式跟備份/匯入相容，對方可以直接用「匯入自訂牌陣」讀取）
+function shareCustomSpread(id) {
+  const spread = loadCustomSpreads().find(s => s.id === id);
+  if (!spread) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify([spread], null, 2)], { type: 'application/json' }));
+  a.download = `Triple.Cell_自訂牌陣_${spread.name}.json`;
+  a.click();
+}
+
+function exportCustomSpreadsJSON() {
+  const list = loadCustomSpreads();
+  if (!list.length) { alert('還沒有自訂牌陣可以備份'); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(list, null, 2)], { type: 'application/json' }));
+  a.download = `Triple.Cell_自訂牌陣備份.json`;
+  a.click();
+}
+
+function importCustomSpreadsJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const imported = JSON.parse(evt.target.result);
+        if (!Array.isArray(imported)) throw new Error();
+        const existing = loadCustomSpreads();
+        const existingIds = new Set(existing.map(s => s.id));
+        const newEntries = imported
+          .filter(s => s.name && Array.isArray(s.positions) && s.count)
+          .map(s => ({
+            id: (s.id && !existingIds.has(s.id)) ? s.id : Date.now() + Math.floor(Math.random() * 1000),
+            name: s.name,
+            positions: s.positions,
+            count: s.count,
+          }));
+        const merged = [...newEntries, ...existing].slice(0, 30);
+        localStorage.setItem(CUSTOM_SPREADS_KEY, JSON.stringify(merged));
+        renderSpreadOptions();
+        alert(`匯入完成，新增 ${newEntries.length} 組自訂牌陣`);
+      } catch {
+        alert('匯入失敗，請確認是從這個 App 匯出的 JSON 備份檔');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
 // ── Start selection mode ──

@@ -974,9 +974,11 @@ body:has(#screen-launch:not(.hidden)) .site-footer { display: none; }
   background: var(--color-bg);
   z-index: 50;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 40px 24px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .travel-overlay.hidden { display: none; }
 .travel-body {
@@ -1496,5 +1498,3 @@ body:has(#screen-launch:not(.hidden)) .site-footer {
 }
 .changelog-latest-content {
   display: block;
-  color: var(--color-text-sub);
-}

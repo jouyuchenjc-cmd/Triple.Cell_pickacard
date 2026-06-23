@@ -263,9 +263,7 @@ function closeCustomSpreadOverlay() {
 }
 
 function renderCustomSpreadPositions() {
-  let count = parseInt($('custom-spread-count').value, 10) || 0;
-  count = Math.min(Math.max(count, 1), 12);
-  $('custom-spread-count').value = count;
+  const count = parseInt($('custom-spread-count').value, 10) || 3;
 
   const container = $('custom-spread-positions');
   const existing = Array.from(container.querySelectorAll('.custom-spread-position-input')).map(i => i.value);

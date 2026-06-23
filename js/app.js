@@ -128,6 +128,37 @@ function renderSpreadOptions() {
   `;
   travelEl.addEventListener('click', openTravelOverlay);
   container.appendChild(travelEl);
+
+  // 已儲存的自訂牌陣
+  loadCustomSpreads().forEach(saved => {
+    const el = document.createElement('button');
+    el.className = 'spread-card';
+    el.innerHTML = `
+      <div class="spread-count">${saved.count}</div>
+      <div class="spread-name">${saved.name}</div>
+      <div class="spread-divider"></div>
+      <div class="spread-sub">${saved.positions.join('・')}</div>
+      <span class="custom-spread-delete">刪除</span>
+    `;
+    el.querySelector('.custom-spread-delete').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteSavedCustomSpread(saved.id);
+    });
+    el.addEventListener('click', () => useSavedCustomSpread(saved.id));
+    container.appendChild(el);
+  });
+
+  // 新增自訂牌陣
+  const customEl = document.createElement('button');
+  customEl.className = 'spread-card';
+  customEl.innerHTML = `
+    <div class="spread-count">+</div>
+    <div class="spread-name">自訂牌陣</div>
+    <div class="spread-divider"></div>
+    <div class="spread-sub">設定你自己的張數與位置</div>
+  `;
+  customEl.addEventListener('click', openCustomSpreadOverlay);
+  container.appendChild(customEl);
 }
 
 // ── Travel spread ──
@@ -208,6 +239,114 @@ function startTravelSpread() {
   };
   closeTravelOverlay();
   startSelection();
+}
+
+// ── Custom spread ──
+const CUSTOM_SPREADS_KEY = 'tc_custom_spreads';
+
+function loadCustomSpreads() {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_SPREADS_KEY) || '[]'); } catch { return []; }
+}
+
+function openCustomSpreadOverlay() {
+  $('custom-spread-name').value = '';
+  $('custom-spread-count').value = 3;
+  $('custom-spread-save-toggle').checked = false;
+  $('custom-spread-error').classList.add('hidden');
+  $('custom-spread-positions').innerHTML = '';
+  renderCustomSpreadPositions();
+  $('custom-spread-overlay').classList.remove('hidden');
+}
+
+function closeCustomSpreadOverlay() {
+  $('custom-spread-overlay').classList.add('hidden');
+}
+
+function renderCustomSpreadPositions() {
+  let count = parseInt($('custom-spread-count').value, 10) || 0;
+  count = Math.min(Math.max(count, 1), 12);
+  $('custom-spread-count').value = count;
+
+  const container = $('custom-spread-positions');
+  const existing = Array.from(container.querySelectorAll('.custom-spread-position-input')).map(i => i.value);
+  container.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const row = document.createElement('div');
+    row.className = 'custom-spread-position-row';
+    const num = document.createElement('span');
+    num.className = 'custom-spread-position-num';
+    num.textContent = i + 1;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'custom-spread-position-input travel-date-input';
+    input.placeholder = '這張牌代表什麼？';
+    input.value = existing[i] || '';
+    input.addEventListener('input', () => input.classList.remove('input-error'));
+    row.appendChild(num);
+    row.appendChild(input);
+    container.appendChild(row);
+  }
+}
+
+function buildCustomSpreadFromForm() {
+  const count = parseInt($('custom-spread-count').value, 10) || 0;
+  const name = $('custom-spread-name').value.trim() || '自訂牌陣';
+  const inputs = Array.from(document.querySelectorAll('.custom-spread-position-input'));
+  const positions = inputs.map(el => el.value.trim());
+
+  if (count < 1 || positions.length !== count || positions.some(p => !p)) {
+    inputs.forEach((el, i) => el.classList.toggle('input-error', !positions[i]));
+    return null;
+  }
+
+  return {
+    name,
+    subtitle: '你的專屬牌陣',
+    count,
+    positions,
+    layout: count <= 3 ? 'row' : (count <= 5 ? 'cross' : 'row'),
+    _key: 'custom',
+  };
+}
+
+function startCustomSpread() {
+  const spread = buildCustomSpreadFromForm();
+  if (!spread) {
+    const err = $('custom-spread-error');
+    err.textContent = '請確認張數與每個位置都已填寫';
+    err.classList.remove('hidden');
+    return;
+  }
+
+  if ($('custom-spread-save-toggle').checked) {
+    const list = loadCustomSpreads();
+    list.unshift({ id: Date.now(), name: spread.name, positions: spread.positions, count: spread.count });
+    try { localStorage.setItem(CUSTOM_SPREADS_KEY, JSON.stringify(list.slice(0, 30))); } catch (e) {}
+  }
+
+  state.spread = spread;
+  closeCustomSpreadOverlay();
+  startSelection();
+}
+
+function useSavedCustomSpread(id) {
+  const saved = loadCustomSpreads().find(s => s.id === id);
+  if (!saved) return;
+  state.spread = {
+    name: saved.name,
+    subtitle: '你的專屬牌陣',
+    count: saved.count,
+    positions: saved.positions,
+    layout: saved.count <= 3 ? 'row' : (saved.count <= 5 ? 'cross' : 'row'),
+    _key: 'custom',
+  };
+  startSelection();
+}
+
+function deleteSavedCustomSpread(id) {
+  const list = loadCustomSpreads().filter(s => s.id !== id);
+  try { localStorage.setItem(CUSTOM_SPREADS_KEY, JSON.stringify(list)); } catch (e) {}
+  renderSpreadOptions();
 }
 
 // ── Start selection mode ──
@@ -942,6 +1081,16 @@ function viewHistory(id) {
       positions,
       layout: 'row',
       _key: 'travel',
+    };
+  } else if (entry.spreadKey === 'custom') {
+    const positions = entry.selections.map(s => s.position);
+    state.spread = {
+      name: entry.spreadName,
+      subtitle: '你的專屬牌陣',
+      count: positions.length,
+      positions,
+      layout: 'row',
+      _key: 'custom',
     };
   } else {
     state.spread = { ...SPREADS[entry.spreadKey], _key: entry.spreadKey };

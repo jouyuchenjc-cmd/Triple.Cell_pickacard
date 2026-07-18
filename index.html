@@ -47,6 +47,18 @@
       <h1>牌卡抽牌</h1>
       <p>深呼吸，來選擇你今天所需要的幫助吧！</p>
     </div>
+    <!-- 訂閱制預告（已訂閱者自動隱藏，見 initLaunchSubscribe） -->
+    <div id="launch-subscribe" class="launch-subscribe hidden">
+      <p class="launch-subscribe-title">🔔 訂閱制即將上線</p>
+      <p class="launch-subscribe-desc">預計 7、8 月會推出訂閱制服務。現階段的訂閱更像是牌卡的擴充，歡迎留下 Email，再上線時就會收到信件通知喔！</p>
+      <div class="subscribe-form">
+        <input type="email" id="launch-subscribe-email" class="subscribe-input" placeholder="你的 Email" autocomplete="email">
+        <button type="button" class="btn btn-primary" id="launch-subscribe-submit" onclick="submitSubscribeLaunch()">留下 Email</button>
+      </div>
+      <p class="subscribe-note">僅用於新卡與功能通知，可隨時取消</p>
+      <p id="launch-subscribe-msg" class="subscribe-msg"></p>
+    </div>
+
     <div class="series-grid">
       <button class="series-card" id="btn-tarot">
         <span class="series-icon">🌙</span>
@@ -58,18 +70,6 @@
         <h2>神明訊息牌</h2>
         <p>35 張牌・神明指引<br>選一張，看看有什麼訊息到來吧</p>
       </button>
-    </div>
-
-    <!-- 訂閱制預告（已訂閱者自動隱藏，見 initLaunchSubscribe） -->
-    <div id="launch-subscribe" class="launch-subscribe hidden">
-      <p class="launch-subscribe-title">🔔 訂閱制即將上線</p>
-      <p class="launch-subscribe-desc">預計 7、8 月會推出訂閱制服務。現階段的訂閱更像是牌卡的擴充，歡迎留下 Email，再上線時就會收到信件通知喔！</p>
-      <div class="subscribe-form">
-        <input type="email" id="launch-subscribe-email" class="subscribe-input" placeholder="你的 Email" autocomplete="email">
-        <button type="button" class="btn btn-primary" id="launch-subscribe-submit" onclick="submitSubscribeLaunch()">留下 Email</button>
-      </div>
-      <p class="subscribe-note">僅用於新卡與功能通知，可隨時取消</p>
-      <p id="launch-subscribe-msg" class="subscribe-msg"></p>
     </div>
   </section>
 

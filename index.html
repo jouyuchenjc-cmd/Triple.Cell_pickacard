@@ -244,6 +244,20 @@
         <button class="btn btn-ghost" id="btn-redraw-bottom" onclick="document.getElementById('btn-reset-selection').click()">重新選牌</button>
         <button class="btn btn-ghost" onclick="document.getElementById('btn-back-home-board').click()">回首頁</button>
       </div>
+
+      <!-- Email 訂閱區塊：只主動展開一次，之後收合成一行連結 -->
+      <div id="subscribe-block" class="subscribe-block hidden">
+        <button type="button" class="subscribe-close" aria-label="關閉" onclick="closeSubscribeBlock()">✕</button>
+        <p class="subscribe-title">有新的牌或新功能時，寄封信給你</p>
+        <div class="subscribe-form">
+          <input type="email" id="subscribe-email" class="subscribe-input" placeholder="你的 Email" autocomplete="email">
+          <input type="text" id="subscribe-hp" name="website" class="subscribe-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button type="button" class="btn btn-primary" id="subscribe-submit" onclick="submitSubscribe()">留下 Email</button>
+        </div>
+        <p class="subscribe-note">僅用於新卡與功能通知，可隨時取消</p>
+        <p id="subscribe-msg" class="subscribe-msg"></p>
+      </div>
+      <div id="subscribe-link-row" class="subscribe-link-row hidden" onclick="openSubscribeBlock()">🔔 訂閱更新通知</div>
     </section>
   </section>
 
@@ -259,6 +273,7 @@
       </div>
     </div>
     <h2 class="screen-title">抽牌紀錄</h2>
+    <p class="history-storage-note">所有抽牌紀錄都只儲存在你自己的裝置瀏覽器中，不會上傳到任何伺服器，也沒有其他人拿得到。也因為如此，若你更換裝置或清除瀏覽器資料，這些紀錄將一併消失且無法找回，請多留意。</p>
     <div id="history-list" class="history-list"></div>
   </section>
 

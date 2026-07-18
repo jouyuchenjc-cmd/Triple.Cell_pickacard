@@ -655,11 +655,9 @@ function openSubscribeBlock() {
   hide('subscribe-link-row');
 }
 
-async function submitSubscribe() {
-  const emailInput = $('subscribe-email');
+// 共用的送出流程：結果頁區塊與開啟畫面預告都用這個（差別只在各自的輸入框/按鈕/訊息元素）
+async function doSubscribe({ emailInput, msgEl, btn, onSuccess }) {
   const hpInput = $('subscribe-hp');
-  const msgEl = $('subscribe-msg');
-  const btn = $('subscribe-submit');
   const email = (emailInput.value || '').trim();
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -681,15 +679,50 @@ async function submitSubscribe() {
     if (!res.ok) throw new Error('bad status');
 
     try { localStorage.setItem(SUBSCRIBE_KEY, 'subscribed'); } catch (e) {}
-    const block = $('subscribe-block');
-    if (block) block.innerHTML = '<p class="subscribe-thanks">✓ 已訂閱，謝謝你！</p>';
-    hide('subscribe-link-row');
+    onSuccess();
   } catch (e) {
     msgEl.textContent = '訂閱失敗，請稍後再試';
     msgEl.classList.add('subscribe-msg-error');
     btn.disabled = false;
   }
 }
+
+function submitSubscribe() {
+  doSubscribe({
+    emailInput: $('subscribe-email'),
+    msgEl: $('subscribe-msg'),
+    btn: $('subscribe-submit'),
+    onSuccess() {
+      const block = $('subscribe-block');
+      if (block) block.innerHTML = '<p class="subscribe-thanks">✓ 已訂閱，謝謝你！</p>';
+      hide('subscribe-link-row');
+      const launch = $('launch-subscribe');
+      if (launch) launch.classList.add('hidden');
+    },
+  });
+}
+
+function submitSubscribeLaunch() {
+  doSubscribe({
+    emailInput: $('launch-subscribe-email'),
+    msgEl: $('launch-subscribe-msg'),
+    btn: $('launch-subscribe-submit'),
+    onSuccess() {
+      const block = $('launch-subscribe');
+      if (block) block.innerHTML = '<p class="subscribe-thanks">✓ 已訂閱，上線時會第一時間通知你！</p>';
+    },
+  });
+}
+
+// 開啟畫面的訂閱制預告：已訂閱過就保持隱藏
+function initLaunchSubscribe() {
+  const block = $('launch-subscribe');
+  if (!block) return;
+  let s = null;
+  try { s = localStorage.getItem(SUBSCRIBE_KEY); } catch (e) {}
+  if (s !== 'subscribed') block.classList.remove('hidden');
+}
+initLaunchSubscribe();
 
 function renderMeanings() {
   // 顯示題目

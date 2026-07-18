@@ -79,7 +79,7 @@ body {
 /* ── Home Screen ── */
 .home-header {
   text-align: center;
-  margin-bottom: 56px;
+  margin-bottom: 24px;
 }
 .home-header .ornament {
   font-size: 28px;
@@ -586,8 +586,9 @@ body {
 
 /* ── 開啟畫面：訂閱制預告 ── */
 .launch-subscribe {
-  max-width: 360px;
-  margin: 28px auto 20px;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto 20px;
   background: var(--color-surface);
   border-radius: 14px;
   padding: 18px 20px;
@@ -1446,6 +1447,7 @@ body:has(#screen-launch:not(.hidden)) .site-footer {
   }
 
   .series-grid { grid-template-columns: 1fr; max-width: 320px; }
+  .launch-subscribe { max-width: 320px; }
   #spread-options {
     grid-template-columns: 1fr 1fr;
   }

@@ -503,6 +503,98 @@ body {
   padding-bottom: 40px;
 }
 
+/* ── Email 訂閱區塊 ── */
+.subscribe-block {
+  position: relative;
+  max-width: 420px;
+  margin: 0 auto 32px;
+  background: var(--color-surface);
+  border-radius: 14px;
+  padding: 20px 24px;
+  box-shadow: var(--shadow-1);
+  text-align: center;
+}
+.subscribe-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--color-text-disabled);
+  cursor: pointer;
+  padding: 4px;
+}
+.subscribe-close:hover { color: var(--color-text-secondary); }
+.subscribe-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 12px;
+}
+.subscribe-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.subscribe-input {
+  flex: 1 1 200px;
+  border: 1px solid var(--color-surface-low);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--color-text);
+  background: #fff;
+}
+.subscribe-input:focus { outline: 2px solid var(--color-primary-light); outline-offset: 1px; }
+.subscribe-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.subscribe-note {
+  font-size: 11px;
+  color: var(--color-text-disabled);
+  margin-top: 10px;
+}
+.subscribe-msg {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 8px;
+  min-height: 14px;
+}
+.subscribe-msg-error { color: #c0392b; }
+.subscribe-thanks {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  padding: 4px 0;
+}
+.subscribe-link-row {
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-text-disabled);
+  cursor: pointer;
+  padding: 4px 0 32px;
+  letter-spacing: 0.5px;
+}
+.subscribe-link-row:hover { color: var(--color-text-secondary); }
+
+/* ── 抽牌紀錄本機儲存說明 ── */
+.history-storage-note {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  background: var(--color-surface);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 12px 0 16px;
+}
+
 /* ── Export snapshot (hidden, used for html2canvas) ── */
 #export-area {
   position: fixed;

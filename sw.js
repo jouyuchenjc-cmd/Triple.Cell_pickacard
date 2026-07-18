@@ -1,6 +1,6 @@
 // ── Triple.Cell 牌卡抽牌 Service Worker ──
 // 每次更新只需改這個版本號，舊的 cache 會自動清除
-const CACHE_VERSION = 'v14';
+const CACHE_VERSION = 'v15';
 const CACHE_NAME = `triplecell-${CACHE_VERSION}`;
 
 // 安裝時預先快取的核心靜態資源

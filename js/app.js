@@ -617,7 +617,78 @@ function showMeanings(autoScroll = true) {
       saveBtn.disabled = false;
     }
   }
+  renderSubscribeBlock();
   if (autoScroll) $('meanings-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Email 訂閱區塊 ──
+const SUBSCRIBE_KEY = 'tc_subscribe_state'; // 'closed' | 'subscribed'（沒有值＝從未出現過）
+const WORKER_SUBSCRIBE_URL = 'https://triplecell-unlock.jouyu-chen-jc.workers.dev/subscribe';
+
+function renderSubscribeBlock() {
+  const s = localStorage.getItem(SUBSCRIBE_KEY);
+  if (!$('subscribe-block') || !$('subscribe-link-row')) return;
+
+  if (s === 'subscribed') {
+    hide('subscribe-block');
+    hide('subscribe-link-row');
+    return;
+  }
+  if (s === 'closed') {
+    hide('subscribe-block');
+    show('subscribe-link-row');
+    return;
+  }
+  // 從未出現過：主動展開一次，之後收合成連結
+  show('subscribe-block');
+  hide('subscribe-link-row');
+  try { localStorage.setItem(SUBSCRIBE_KEY, 'closed'); } catch (e) {}
+}
+
+function closeSubscribeBlock() {
+  hide('subscribe-block');
+  show('subscribe-link-row');
+}
+
+function openSubscribeBlock() {
+  show('subscribe-block');
+  hide('subscribe-link-row');
+}
+
+async function submitSubscribe() {
+  const emailInput = $('subscribe-email');
+  const hpInput = $('subscribe-hp');
+  const msgEl = $('subscribe-msg');
+  const btn = $('subscribe-submit');
+  const email = (emailInput.value || '').trim();
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    msgEl.textContent = '請輸入正確的 Email 格式';
+    msgEl.classList.add('subscribe-msg-error');
+    return;
+  }
+
+  btn.disabled = true;
+  msgEl.textContent = '';
+  msgEl.classList.remove('subscribe-msg-error');
+
+  try {
+    const res = await fetch(WORKER_SUBSCRIBE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, hp: hpInput ? hpInput.value : '' }),
+    });
+    if (!res.ok) throw new Error('bad status');
+
+    try { localStorage.setItem(SUBSCRIBE_KEY, 'subscribed'); } catch (e) {}
+    const block = $('subscribe-block');
+    if (block) block.innerHTML = '<p class="subscribe-thanks">✓ 已訂閱，謝謝你！</p>';
+    hide('subscribe-link-row');
+  } catch (e) {
+    msgEl.textContent = '訂閱失敗，請稍後再試';
+    msgEl.classList.add('subscribe-msg-error');
+    btn.disabled = false;
+  }
 }
 
 function renderMeanings() {

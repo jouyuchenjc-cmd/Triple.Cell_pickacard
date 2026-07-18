@@ -543,7 +543,7 @@ body {
   border: 1px solid var(--color-surface-low);
   border-radius: 10px;
   padding: 10px 14px;
-  font-size: 14px;
+  font-size: 16px; /* 16px 以上 iOS Safari 聚焦時才不會自動放大畫面 */
   font-family: inherit;
   color: var(--color-text);
   background: #fff;
@@ -583,6 +583,30 @@ body {
   letter-spacing: 0.5px;
 }
 .subscribe-link-row:hover { color: var(--color-text-secondary); }
+
+/* ── 開啟畫面：訂閱制預告 ── */
+.launch-subscribe {
+  max-width: 360px;
+  margin: 28px auto 20px;
+  background: var(--color-surface);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-1);
+  text-align: center;
+}
+.launch-subscribe-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+.launch-subscribe-desc {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  text-align: left;
+  margin-bottom: 12px;
+}
 
 /* ── 抽牌紀錄本機儲存說明 ── */
 .history-storage-note {

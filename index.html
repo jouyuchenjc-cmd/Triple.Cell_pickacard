@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Triple.Cell 牌卡抽牌</title>
 
+  <!-- 跨網域資料轉移：這是舊網址，把使用者的自訂牌陣/抽牌紀錄/訂閱狀態搬去新網站 oracle.triplecells.com -->
+  <script>
+    window.MIGRATION_CONFIG = {
+      role: 'source',
+      appId: 'pickacard',
+      targetUrl: 'https://oracle.triplecells.com/',
+      keys: ['tc_custom_spreads', 'tc_history', 'tc_subscription'],
+    };
+  </script>
+  <script src="migration.js"></script>
+
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#548EB8">

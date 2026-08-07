@@ -39,7 +39,9 @@
       return;
     }
 
-    showMigrateButton();
+    // 頁面自己有做搬遷卡片/按鈕的話（呼叫 TripleCellMigration.go()），設 hideFloatingButton:true
+    // 避免畫面上同時出現兩個「搬到新網站」的按鈕。沒設定就維持原本的浮動按鈕。
+    if (!cfg.hideFloatingButton) showMigrateButton();
   }
 
   function showMigrateButton() {
@@ -149,4 +151,11 @@
   function base64ToUtf8(b64) {
     return decodeURIComponent(escape(atob(b64)));
   }
+
+  // ── 對外 API：讓頁面自己畫的按鈕/文案（例如首頁的公告卡片）能直接觸發搬遷，
+  // 不用依賴這支檔案自動插入的浮動按鈕。isMigrated() 讓頁面自己決定要不要顯示搬遷區塊。
+  window.TripleCellMigration = {
+    isMigrated: function () { return localStorage.getItem(FLAG_KEY) === 'true'; },
+    go: function () { if (cfg && cfg.role === 'source') doMigrate(); },
+  };
 })();

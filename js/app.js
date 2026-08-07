@@ -702,25 +702,21 @@ function submitSubscribe() {
   });
 }
 
-function submitSubscribeLaunch() {
-  doSubscribe({
-    emailInput: $('launch-subscribe-email'),
-    msgEl: $('launch-subscribe-msg'),
-    btn: $('launch-subscribe-submit'),
-    onSuccess() {
-      const block = $('launch-subscribe');
-      if (block) block.innerHTML = '<p class="subscribe-thanks">✓ 已訂閱，上線時會第一時間通知你！</p>';
-    },
-  });
+// 首頁的「搬新家」卡片按鈕：交給 migration.js 的對外 API 觸發真正的搬遷動作
+// （這裡只負責 UI 這一層，實際打包/導頁邏輯都在 migration.js，避免兩邊各寫一份容易兜不起來）
+function startCardsMigration() {
+  if (window.TripleCellMigration && typeof window.TripleCellMigration.go === 'function') {
+    window.TripleCellMigration.go();
+  }
 }
 
-// 開啟畫面的訂閱制預告：已訂閱過就保持隱藏
+// 開啟畫面的搬家公告：已經搬過的裝置就保持隱藏（跟 migration.js 共用同一個「已搬移」標記，
+// 不用自己另外存一個 key，兩邊才不會對不起來）
 function initLaunchSubscribe() {
   const block = $('launch-subscribe');
   if (!block) return;
-  let s = null;
-  try { s = localStorage.getItem(SUBSCRIBE_KEY); } catch (e) {}
-  if (s !== 'subscribed') block.classList.remove('hidden');
+  const migrated = window.TripleCellMigration && window.TripleCellMigration.isMigrated();
+  if (!migrated) block.classList.remove('hidden');
 }
 initLaunchSubscribe();
 

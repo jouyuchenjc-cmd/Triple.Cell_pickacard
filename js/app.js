@@ -736,7 +736,7 @@ function renderMeanings() {
   if (state.series === 'tarot') {
     disclaimer.innerHTML = '如果你不會解塔羅，歡迎透過閱讀文字，去感受跟進行自我提問，來為自己找到答案。<br><br>任何的訊息，都只是給予我們去尋找別的切角的可能，<br><br>而不是生命只能是這方向的劇本，因為我們永遠擁有自己生命裡的選擇權。';
   } else {
-    disclaimer.innerHTML = '這裡沒有任何生命裡的答案，這有的是邀請我們重新檢視自己，注意自己，好好對自己提問，讓我們把力氣放回自己身上，而非外在的追尋。';
+    disclaimer.innerHTML = '這裡沒有任何生命裡的標準答案。這些訊息邀請你重新檢視自己、留意當下的感受，並好好向自己提問，將選擇與行動的力量帶回自己身上，而不是交給外在的指引。';
   }
 
   const container = $('meanings-list');

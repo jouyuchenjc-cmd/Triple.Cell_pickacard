@@ -1018,9 +1018,16 @@ body:has(#screen-launch:not(.hidden)) .site-footer { display: none; }
 .site-menu-link:hover { color: var(--color-primary); }
 .site-menu-link svg { color: #878787; flex-shrink: 0; }
 
-.site-menu-copy {
-  margin-top: auto;
+.site-menu-disclaimer {
+  margin-top: auto; /* 把「免責聲明＋版權」這一組一起推到選單最下方 */
   padding-top: 20px;
+  font-size: 10.5px;
+  color: #9a9a9a;
+  letter-spacing: 0.3px;
+  line-height: 1.7;
+}
+.site-menu-copy {
+  margin-top: 10px;
   font-size: 11px;
   color: #878787;
   letter-spacing: 0.5px;

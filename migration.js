@@ -9,7 +9,8 @@
 //       role: 'source',                          // 'source'（舊網域）或 'target'（新網域）
 //       appId: 'pickacard',                      // 這個 App 的識別碼，各 App 用不同字串
 //       targetUrl: 'https://oracle.triplecells.com/',  // 只有 role:'source' 需要
-//       keys: ['tc_custom_spreads', 'tc_history', 'tc_subscription'], // 只有 role:'source' 需要
+//       keys: ['tc_custom_spreads', 'tc_history', 'tc_subscription'], // 兩邊都建議設，target 端會拿來當允許清單
+//       trustedOrigins: ['https://舊網域'],       // 只有 role:'target' 用：referrer 不在清單裡就忽略 ?migrate=
 //     };
 //   </script>
 //   <script src="migration.js"></script>
@@ -97,6 +98,20 @@
     var raw = params.get('migrate');
     if (!raw) return;
 
+    // 來源檢查：referrer 存在時必須是白名單網域，才處理這個參數。
+    // referrer 是瀏覽器依「實際導頁過來的網址」自動附上的，網頁自己 JS 沒辦法偽造成別的網域，
+    // 所以能擋掉「有心人士做一個 ?migrate=... 連結傳給別人點」這種攻擊
+    // （不是從真正的舊網站導過來，就不理這個參數）。
+    // 若瀏覽器基於隱私設定完全不附 referrer，合法的搬遷流程也可能遇到，這裡選擇放行但記警告，
+    // 避免因此擋掉正常使用者搬家。
+    if (cfg.trustedOrigins && cfg.trustedOrigins.length && document.referrer) {
+      var referrerOrigin = safeOrigin(document.referrer);
+      if (referrerOrigin && cfg.trustedOrigins.indexOf(referrerOrigin) === -1) {
+        console.warn('[migration] 忽略搬遷參數：來源網域不在允許清單', referrerOrigin);
+        return;
+      }
+    }
+
     var payload;
     try {
       payload = JSON.parse(base64ToUtf8(raw));
@@ -105,8 +120,15 @@
       return;
     }
 
+    // key 允許清單：只寫入這個 App 設定裡列出的 key，其餘一律忽略——
+    // 就算網址被偽造塞了其他 key（例如假造 tc_subscription 免費解鎖），也不會被寫進 localStorage。
+    var allowedKeys = cfg.keys;
     var restoredKeys = [];
     Object.keys(payload).forEach(function (k) {
+      if (allowedKeys && allowedKeys.length && allowedKeys.indexOf(k) === -1) {
+        console.warn('[migration] 忽略不在允許清單裡的 key:', k);
+        return;
+      }
       try {
         localStorage.setItem(k, payload[k]);
         restoredKeys.push(k);
@@ -142,6 +164,11 @@
       el.style.opacity = '0';
       setTimeout(function () { el.remove(); }, 400);
     }, 3200);
+  }
+
+  // 從一個網址安全取出 origin（scheme+host），格式不合法就回傳 null 而不是丟例外。
+  function safeOrigin(u) {
+    try { return new URL(u).origin; } catch (e) { return null; }
   }
 
   // ── UTF-8 安全的 base64 編解碼（btoa/atob 原生只吃 Latin1，中文內容需要這層轉換）──

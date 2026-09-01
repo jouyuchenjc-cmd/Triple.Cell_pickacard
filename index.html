@@ -3,16 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Triple.Cell 牌卡抽牌</title>
+  <title>Triple.Cell 牌卡抽牌｜塔羅牌 × 神明訊息牌線上抽卡</title>
+  <meta name="description" content="深呼吸，抽一張塔羅牌或神明訊息牌，讓卡牌陪你梳理此刻的心情與問題。Triple.Cell_illustration 出品，免費抽牌，訂閱解鎖更多神諭與擴充內容。">
 
-  <!-- 跨網域資料轉移：這是舊網址，把使用者的自訂牌陣/抽牌紀錄/訂閱狀態搬去新網站 oracle.triplecells.com -->
+  <!-- 社群分享預覽（Open Graph / Twitter Card）：避免爬蟲抓到頁面裡的訂閱說明文字當摘要 -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://oracle.triplecells.com/">
+  <meta property="og:site_name" content="Triple.Cell 牌卡抽牌">
+  <meta property="og:locale" content="zh_TW">
+  <meta property="og:title" content="Triple.Cell 牌卡抽牌｜塔羅牌 × 神明訊息牌線上抽卡">
+  <meta property="og:description" content="深呼吸，抽一張塔羅牌或神明訊息牌，讓卡牌陪你梳理此刻的心情與問題。Triple.Cell_illustration 出品，免費抽牌，訂閱解鎖更多神諭與擴充內容。">
+  <meta property="og:image" content="https://oracle.triplecells.com/icons.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Triple.Cell 牌卡抽牌｜塔羅牌 × 神明訊息牌線上抽卡">
+  <meta name="twitter:description" content="深呼吸，抽一張塔羅牌或神明訊息牌，讓卡牌陪你梳理此刻的心情與問題。Triple.Cell_illustration 出品，免費抽牌，訂閱解鎖更多神諭與擴充內容。">
+  <meta name="twitter:image" content="https://oracle.triplecells.com/icons.png">
+
+  <!-- 跨網域資料轉移：這是新網址，接收從舊網站 jouyuchenjc-cmd.github.io/Triple.Cell_pickacard 搬過來的資料 -->
   <script>
     window.MIGRATION_CONFIG = {
-      role: 'source',
+      role: 'target',
       appId: 'pickacard',
-      targetUrl: 'https://oracle.triplecells.com/',
+      // 允許清單：只有這幾個 key 會被搬遷寫入，其餘一律忽略（防止偽造 ?migrate= 網址塞入其他資料）
       keys: ['tc_custom_spreads', 'tc_history', 'tc_subscription'],
-      hideFloatingButton: true, // 首頁已經有專屬的「搬新家」卡片，不用再疊一個浮動按鈕
+      // 只信任從這個網域導過來的搬遷請求（referrer 由瀏覽器依實際來源網址附上，網頁自己無法偽造）
+      trustedOrigins: ['https://jouyuchenjc-cmd.github.io'],
     };
   </script>
   <script src="migration.js"></script>
@@ -47,7 +62,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
         </a>
       </div>
-      <button class="btn btn-cta launch-start" id="btn-launch-start" onclick="document.getElementById('screen-launch').classList.add('hidden');document.getElementById('screen-home').classList.remove('hidden');">開始抽牌</button>
+      <button class="btn btn-cta launch-start" id="btn-launch-start" onclick="enterHome()">開始抽牌</button>
       <p class="launch-copy">Lurn Creative Ltd. 渝澪創意有限公司</p>
     </div>
   </section>
@@ -59,16 +74,6 @@
       <h1>牌卡抽牌</h1>
       <p>深呼吸，來選擇你今天所需要的幫助吧！</p>
     </div>
-    <!-- 搬新家公告（已搬過的裝置自動隱藏，見 initLaunchSubscribe） -->
-    <div id="launch-subscribe" class="launch-subscribe hidden">
-      <p class="launch-subscribe-title">📦 我們搬新家了！</p>
-      <p class="launch-subscribe-desc">牌卡抽牌搬到新網站了，也上線了訂閱制、能解鎖更多神明訊息牌！點下面的按鈕，你存的自訂牌陣、抽牌紀錄會自動幫你搬過去，不會不見。</p>
-      <div class="subscribe-form">
-        <button type="button" class="btn btn-primary" id="launch-migrate-btn" onclick="startCardsMigration()">搬到新網站 →</button>
-      </div>
-      <p class="subscribe-note">資料只會在你的裝置和瀏覽器之間傳輸，不會經過任何伺服器</p>
-    </div>
-
     <div class="series-grid">
       <button class="series-card" id="btn-tarot">
         <span class="series-icon">🌙</span>
@@ -78,9 +83,10 @@
       <button class="series-card" id="btn-deity">
         <span class="series-icon">🪷</span>
         <h2>神明訊息牌</h2>
-        <p>35 張牌・神明指引<br>選一張，看看有什麼訊息到來吧</p>
+        <p><span id="deity-card-count-line">35 張牌・神明指引</span><br>選一張，看看有什麼訊息到來吧</p>
       </button>
     </div>
+    <button class="home-expansion-hint" id="deity-expansion-hint" onclick="openSubscribeOverlay()">🔒 訂閱解鎖更多神諭</button>
   </section>
 
   <!-- ── 選擇排陣 ── -->
@@ -162,6 +168,108 @@
 
       <button class="btn btn-cta" id="btn-custom-spread-start" onclick="startCustomSpread()">開始抽牌</button>
       <button class="btn btn-ghost" style="margin-top:12px" onclick="closeCustomSpreadOverlay()">取消</button>
+    </div>
+  </div>
+
+  <!-- ── 訂閱方案 Overlay ── -->
+  <div id="subscribe-overlay" class="travel-overlay hidden">
+    <div class="topbar">
+      <button class="btn-back" onclick="closeSubscribeOverlay()">← 返回</button>
+      <button class="btn-back" style="margin-left:auto" onclick="closeSubscribeOverlay(); goHome();">回首頁</button>
+    </div>
+    <div class="travel-body">
+      <div class="prepare-ornament">✦  ✦  ✦</div>
+      <h2 class="travel-title">解鎖加值內容</h2>
+      <p class="travel-desc">訂閱期間內，所有加值牌陣都能使用<br>包含訂閱期間上線的新內容</p>
+
+      <details class="sub-benefits-collapse">
+        <summary>查看訂閱內容包含哪些 ▾</summary>
+        <ul class="announce-benefits">
+          <li>🔓 解鎖「擴充神諭」，神明訊息牌牌組變大、抽到更多種卡片</li>
+          <li>🆕 後續的新內容，只要在訂閱期間內都會自動一起解鎖，不用額外付費</li>
+          <li>📱 同一組解鎖碼可在多個裝置使用，不限定單一手機或瀏覽器</li>
+          <li>🗓️ 更新頻率不定期，但承諾一年至少更新兩次，每次至少新增 5 張以上的卡，或釋出更完整的功能</li>
+        </ul>
+      </details>
+
+      <div class="sub-card">
+        <p class="sub-plan-hint">▼ 請點選訂閱方案，即會導入付款頁面 ▼</p>
+
+        <div class="custom-spread-field" style="width:100%">
+          <input type="email" id="subscribe-email-input" class="travel-date-input custom-spread-wide-input" style="border-color:#A8A7A7" placeholder="輸入 Email（解鎖碼會綁定這個信箱）" oninput="validateSubscribeEmail()">
+        </div>
+        <p id="subscribe-email-error" class="travel-error hidden"></p>
+
+        <div class="sub-plans">
+          <button class="sub-plan-card" onclick="goToCheckout('quarterly')">
+            <div class="sub-plan-name">季費</div>
+            <div class="sub-plan-price">NT$150</div>
+            <div class="sub-plan-period">3 個月</div>
+          </button>
+          <button class="sub-plan-card sub-plan-card--best" onclick="goToCheckout('annual')">
+            <div class="sub-plan-badge">最划算</div>
+            <div class="sub-plan-name">年費</div>
+            <div class="sub-plan-price">NT$399</div>
+            <div class="sub-plan-period">12 個月</div>
+          </button>
+        </div>
+
+        <!-- 同意接收更新通知（純文字說明，不需勾選） -->
+        <p class="sub-consent-note">點選方案即代表你同意接收與訂閱相關的產品更新與服務通知。</p>
+        <p class="sub-consent-note">此訂閱不會自動續約扣款，僅會在到期前兩週寄送 email 通知提醒，到期後需自行回來重新訂閱。</p>
+        <p class="sub-consent-note">付款完成即視為訂閱／解鎖服務已生效，恕不接受任何退款申請，請確認方案內容後再進行付款。</p>
+
+        <!-- 點方案後先確認信箱正確，再前往付款（避免打錯綁錯信箱、影響續訂與通知） -->
+        <div id="subscribe-confirm" class="sub-confirm hidden">
+          <p class="sub-confirm-text">解鎖碼會綁定以下信箱，<br>也會用來接收更新通知，請確認正確</p>
+          <div class="sub-confirm-email">
+            <svg class="sub-confirm-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+            <span id="subscribe-confirm-email"></span>
+          </div>
+          <div class="sub-confirm-actions">
+            <button class="btn btn-primary" id="subscribe-confirm-go" style="width:100%" onclick="confirmCheckout()">確認正確，前往付款</button>
+            <button class="btn-text-cancel" onclick="cancelCheckoutConfirm()">← 信箱打錯了，返回修改</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-section-divider"></div>
+      <div class="sub-divider-text sub-divider-text--dark">▼ 已經訂閱了，請直接輸入解鎖碼 ▼</div>
+
+      <div class="custom-spread-field" style="width:100%">
+        <input type="text" id="redeem-code-input" class="travel-date-input custom-spread-wide-input" placeholder="輸入解鎖碼">
+      </div>
+      <p id="redeem-error" class="travel-error hidden"></p>
+      <button class="btn btn-primary" id="btn-redeem-code" style="width:100%" onclick="submitRedeemCode()">輸入解鎖碼</button>
+      <p class="sub-consent-note">忘記或遺失解鎖碼了嗎？歡迎寄信到 <a href="mailto:jouyu.lee.notion@gmail.com">jouyu.lee.notion@gmail.com</a> 協助查詢。</p>
+
+      <button class="btn-text-cancel" onclick="closeSubscribeOverlay()">取消</button>
+    </div>
+  </div>
+
+  <!-- ── 新功能公告（只顯示一次） ── -->
+  <div id="announce-overlay" class="modal-backdrop hidden" onclick="closeAnnounceOverlay()">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="prepare-ornament">✦ ✨ ✦</div>
+      <h2 class="travel-title" id="announce-title"></h2>
+      <p class="travel-desc" id="announce-intro"></p>
+
+      <ul class="announce-benefits" id="announce-benefits"></ul>
+
+      <div class="sub-plans" id="announce-plans"></div>
+
+      <button class="btn btn-cta" style="width:100%" id="announce-cta-btn">了解訂閱方案</button>
+      <button class="btn btn-ghost" style="width:100%;margin-top:12px" id="announce-later-btn" onclick="closeAnnounceOverlay()">之後再說</button>
+    </div>
+  </div>
+
+  <!-- ── 付款完成後，等待背景通知確認訂閱結果 ── -->
+  <div id="payment-wait-overlay" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="loading-spinner"></div>
+      <h2 class="travel-title">確認付款結果中</h2>
+      <p class="travel-desc">通常幾秒鐘內就會完成，請稍候，不用重新整理頁面</p>
+      <p id="payment-wait-debug" class="travel-desc" style="font-size:12px;opacity:.7;margin-top:12px;word-break:break-all;"></p>
     </div>
   </div>
 
@@ -248,14 +356,6 @@
     <button class="btn btn-cta hidden" id="btn-reveal-meanings">查看解讀 ↓</button>
 
     <!-- 牌義解讀 -->
-    <!-- 輸出結果（存圖 + 複製文字） -->
-    <div id="export-area" class="hidden">
-      <div id="export-snapshot">
-        <div id="snapshot-slots"></div>
-        <div id="snapshot-meanings"></div>
-      </div>
-    </div>
-
     <section id="meanings-section" class="hidden">
       <h3>✦ 牌義解讀 ✦</h3>
       <div id="meanings-question" class="meanings-question hidden"></div>
@@ -295,7 +395,6 @@
       </div>
     </div>
     <h2 class="screen-title">抽牌紀錄</h2>
-    <p class="history-storage-note">所有抽牌紀錄都只儲存在你自己的裝置瀏覽器中，不會上傳到任何伺服器，也沒有其他人拿得到。也因為如此，若你更換裝置或清除瀏覽器資料，這些紀錄將一併消失且無法找回，請多留意。</p>
     <div id="history-list" class="history-list"></div>
   </section>
 
@@ -348,6 +447,30 @@
       <div class="site-menu-divider"></div>
 
       <div class="site-menu-section">
+        <p class="site-menu-label">訂閱狀態</p>
+        <div id="menu-subscription-info" class="site-menu-subscription"></div>
+      </div>
+
+      <div class="site-menu-divider"></div>
+
+      <!-- 更新通知：跟牌義解讀那個「展開一次後收合成連結」不同，這裡固定顯示，
+           讓當下沒訂閱、之後想起來的人隨時找得到入口 -->
+      <div class="site-menu-section">
+        <p class="site-menu-label">更新通知</p>
+        <div id="menu-subscribe-block" class="menu-subscribe-block">
+          <div class="subscribe-form">
+            <input type="email" id="menu-subscribe-email" class="subscribe-input" placeholder="你的 Email" autocomplete="email">
+            <input type="text" id="menu-subscribe-hp" name="website" class="subscribe-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <button type="button" class="btn btn-primary" id="menu-subscribe-submit" onclick="submitMenuSubscribe()">留下 Email</button>
+          </div>
+          <p class="subscribe-note">有新的牌或新功能時，寄封信給你，可隨時取消</p>
+          <p id="menu-subscribe-msg" class="subscribe-msg"></p>
+        </div>
+      </div>
+
+      <div class="site-menu-divider"></div>
+
+      <div class="site-menu-section">
         <p class="site-menu-label">資料庫</p>
         <div class="site-menu-series">
           <button class="site-menu-series-btn" onclick="document.getElementById('site-menu-panel').classList.remove('open'); showHistoryScreen()">
@@ -364,7 +487,10 @@
       <div class="site-menu-section">
         <p class="site-menu-label">更新紀錄</p>
         <div class="site-menu-series">
-          <div id="menu-latest-update" class="site-menu-update-latest"></div>
+          <details class="site-menu-update-collapse">
+            <summary>・ 查看最新更新 ▾</summary>
+            <div id="menu-latest-update" class="site-menu-update-latest"></div>
+          </details>
           <button class="site-menu-series-btn" onclick="document.getElementById('site-menu-panel').classList.remove('open'); showChangelogScreen()">
             🔍 查看全部更新
           </button>
@@ -388,7 +514,11 @@
           </a>
           <a href="https://api.payuni.com.tw/api/su/store_info/U056782241/zvLQdIO7uSpg3KKj3pyjY" target="_blank" rel="noopener" class="site-menu-link">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-            購買牌卡
+            購買牌卡與其他
+          </a>
+          <a href="mailto:jouyu.lee.notion@gmail.com" class="site-menu-link">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="m22 6-10 7L2 6"/></svg>
+            客服信箱：jouyu.lee.notion@gmail.com
           </a>
         </div>
       </div>

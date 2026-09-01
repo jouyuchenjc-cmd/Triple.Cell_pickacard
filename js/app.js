@@ -1,5 +1,14 @@
 'use strict';
 
+// 從舊網站搬過來的資料寫進 localStorage 後（見 migration.js），重新讀取訂閱狀態並重繪。
+// 自訂牌陣（tc_custom_spreads）和抽牌紀錄（tc_history）不需要另外處理：
+// loadCustomSpreads()/loadHistory() 每次都直接讀 localStorage，下次開啟對應畫面時自然就是新資料。
+window.addEventListener('migration:complete', () => {
+  loadSubscription();
+  renderLockState();
+  if (typeof renderMenuSubscriptionInfo === 'function') renderMenuSubscriptionInfo();
+});
+
 // ── Position-aware framing ──
 const POSITION_FRAMES = {
   '今日指引':   '今天，這張牌帶給你的訊息是：',
@@ -62,11 +71,400 @@ const showOnly = id => {
 };
 
 const CHANGELOG = [
+  { date: '2026-08-07', content: '訂閱版釋出，同步上線新的神明訊息牌（擴充神諭）。訂閱內容更新時間不定，但承諾一年至少更新兩次' },
   { date: '2026-06-23', content: '新增自訂牌陣功能：可自訂張數（最多 12 張）與每個位置的提問內容，能儲存供下次直接使用' },
   { date: '2026-06-20', content: '新增塔羅逆位，包含對應關鍵字與專屬訊息，若抽中同時且會以逆位方式呈現牌面' },
   { date: '2026-06-16', content: '新增出遠門牌陣（自選日期，每天一張，最多 30 天）、更新紀錄分頁與預覽、刪除單筆抽牌紀錄、漢堡選單新增資料庫與更新紀錄區塊、修正打字放大畫面問題' },
   { date: '2026-06-15', content: '新增塔羅牌義連結、神明訊息牌牌義顯示修正（標籤樣式與換行保留）' },
 ];
+
+// ── Subscription (paid unlock) ──
+const WORKER_BASE_URL = 'https://triplecell-unlock.jouyu-chen-jc.workers.dev';
+const SUBSCRIPTION_KEY = 'tc_subscription';
+
+// ── Email 訂閱（新卡/新功能更新通知，跟上面的付費解鎖是兩件事）──
+const WORKER_SUBSCRIBE_URL = 'https://triplecell-unlock.jouyu-chen-jc.workers.dev/subscribe';
+const SUBSCRIBE_KEY = 'tc_subscribe_state'; // 'closed' | 'subscribed'（沒有值＝從未出現過，只給牌義解讀那個一次性區塊用）
+
+const subscription = { code: null, expiresAt: null };
+
+function loadSubscription() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SUBSCRIPTION_KEY) || 'null');
+    if (saved) Object.assign(subscription, saved);
+  } catch (e) {}
+}
+
+function saveSubscription() {
+  try { localStorage.setItem(SUBSCRIPTION_KEY, JSON.stringify(subscription)); } catch (e) {}
+}
+
+function isSubscribed() {
+  return !!(subscription.code && subscription.expiresAt && Date.now() < subscription.expiresAt);
+}
+
+// app 啟動時背景重新確認到期日（不打斷使用者，靜默更新）
+async function refreshSubscription() {
+  if (!subscription.code) return;
+  try {
+    const res = await fetch(`${WORKER_BASE_URL}/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: subscription.code }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.valid) {
+      subscription.expiresAt = data.expiresAt;
+    } else {
+      subscription.code = null;
+      subscription.expiresAt = null;
+    }
+    saveSubscription();
+    renderLockState();
+  } catch (e) {
+    // 離線或 Worker 還沒上線：先信任本地快取的到期日，不強制登出
+  }
+}
+
+// 使用者輸入 / 連結帶入 code 時呼叫，主動解鎖
+async function redeemCode(code) {
+  code = (code || '').trim();
+  if (!code) return { ok: false, message: '請輸入解鎖碼' };
+
+  try {
+    const res = await fetch(`${WORKER_BASE_URL}/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+    if (data.valid) {
+      subscription.code = code;
+      subscription.expiresAt = data.expiresAt;
+      saveSubscription();
+      renderLockState();
+      return { ok: true, expiresAt: data.expiresAt };
+    }
+    return { ok: false, message: data.message || '這組解鎖碼無效或已過期' };
+  } catch (e) {
+    return { ok: false, message: '連線失敗，請稍後再試' };
+  }
+}
+
+function renderLockState() {
+  const hint = $('deity-expansion-hint');
+  if (hint) hint.classList.toggle('hidden', isSubscribed());
+  renderMenuSubscriptionInfo();
+  renderDeityCardCount();
+}
+
+function renderDeityCardCount() {
+  const el = $('deity-card-count-line');
+  if (!el) return;
+  const base = DEITY_CARDS.length;
+  const total = base + DEITY_EXPANSION_CARDS.length;
+  el.textContent = isSubscribed()
+    ? `${total} 張牌・神明指引`
+    : `${base} 張牌・神明指引`;
+}
+
+function renderMenuSubscriptionInfo() {
+  const el = $('menu-subscription-info');
+  if (!el) return;
+  const closeMenu = "document.getElementById('site-menu-panel').classList.remove('open');";
+  try {
+    if (isSubscribed()) {
+      const dateStr = new Date(subscription.expiresAt).toLocaleDateString('zh-TW');
+      const daysLeft = Math.ceil((subscription.expiresAt - Date.now()) / (1000 * 60 * 60 * 24));
+      const expiryWarning = daysLeft <= 7
+        ? `<p class="site-menu-sub-status site-menu-sub-status--warning">⚠️ 訂閱將於 ${daysLeft} 天後到期，記得續訂！</p>`
+        : '';
+      el.innerHTML = `
+        <p class="site-menu-sub-status site-menu-sub-status--active">✓ 訂閱中・到期日 ${dateStr}</p>
+        ${expiryWarning}
+        <p class="site-menu-sub-status">解鎖碼：${subscription.code}（在其他裝置輸入這組碼即可使用）</p>
+        <button class="site-menu-series-btn" onclick="${closeMenu} openSubscribeOverlay();">🌟 續訂 / 管理</button>
+      `;
+    } else {
+      el.innerHTML = `
+        <p class="site-menu-sub-status">尚未訂閱</p>
+        <button class="site-menu-series-btn" onclick="${closeMenu} openSubscribeOverlay();">🩶 立即訂閱解鎖更多神諭</button>
+      `;
+    }
+  } catch (e) {
+    console.error('[renderMenuSubscriptionInfo] failed:', e);
+    el.innerHTML = `
+      <p class="site-menu-sub-status">尚未訂閱</p>
+      <button class="site-menu-series-btn" onclick="${closeMenu} openSubscribeOverlay();">🩶 立即訂閱解鎖更多神諭</button>
+    `;
+  }
+}
+
+// ── Subscribe overlay ──
+function openSubscribeOverlay() {
+  $('redeem-code-input').value = '';
+  $('redeem-error').classList.add('hidden');
+  $('subscribe-email-input').value = '';
+  $('subscribe-email-error').classList.add('hidden');
+  $('subscribe-confirm').classList.add('hidden');
+  pendingCheckout = null;
+  $('subscribe-overlay').classList.remove('hidden');
+}
+
+function closeSubscribeOverlay() {
+  $('subscribe-overlay').classList.add('hidden');
+}
+
+// ── 更新公告（每次重大更新都可以加一筆，只彈一次） ──
+// 之後每次想推播新公告，就在這個陣列最後面加一個物件即可
+const ANNOUNCEMENTS = [
+  {
+    id: 'sub-launch-2026-06',
+    title: '新功能上線',
+    intro: '神明訊息牌新增訂閱制服務',
+    benefits: [
+      '🔓 解鎖「擴充神諭」，神明訊息牌牌組變大、抽到更多種卡片',
+      '🆕 後續的新內容，只要在訂閱期間內都會自動一起解鎖，不用額外付費',
+      '📱 同一組解鎖碼可在多個裝置使用，不限定單一手機或瀏覽器',
+    ],
+    showPlans: true,
+    skipIfSubscribed: true,
+    ctaText: '即刻訂閱解鎖加值內容',
+    onCta: () => { closeAnnounceOverlay(); openSubscribeOverlay(); },
+  },
+];
+
+const ANNOUNCE_SEEN_KEY = 'tc_last_seen_announce_id';
+let _currentAnnounceId = null;
+
+function enterHome() {
+  hide('screen-launch');
+  show('screen-home');
+  maybeShowAnnounce();
+}
+
+function maybeShowAnnounce() {
+  if (!ANNOUNCEMENTS.length) return;
+  const latest = ANNOUNCEMENTS[ANNOUNCEMENTS.length - 1];
+  if (latest.skipIfSubscribed && isSubscribed()) return;
+  if (new URLSearchParams(location.search).has('order') || new URLSearchParams(location.search).has('unlock')) return; // 付款流程中，先不要蓋上去
+
+  let seenId = null;
+  try { seenId = localStorage.getItem(ANNOUNCE_SEEN_KEY); } catch (e) {}
+  if (seenId === latest.id) return;
+
+  renderAnnounce(latest);
+  show('announce-overlay');
+}
+
+function renderAnnounce(a) {
+  _currentAnnounceId = a.id;
+  $('announce-title').textContent = a.title;
+  $('announce-intro').textContent = a.intro;
+  $('announce-benefits').innerHTML = (a.benefits || []).map(b => `<li>${b}</li>`).join('');
+
+  $('announce-plans').innerHTML = a.showPlans ? `
+    <div class="sub-plan-card sub-plan-card--static">
+      <div class="sub-plan-name">季費</div>
+      <div class="sub-plan-price">NT$150</div>
+      <div class="sub-plan-period">3 個月</div>
+    </div>
+    <div class="sub-plan-card sub-plan-card--best sub-plan-card--static">
+      <div class="sub-plan-badge">最划算</div>
+      <div class="sub-plan-name">年費</div>
+      <div class="sub-plan-price">NT$399</div>
+      <div class="sub-plan-period">12 個月</div>
+    </div>
+  ` : '';
+
+  const ctaBtn = $('announce-cta-btn');
+  ctaBtn.textContent = a.ctaText || '知道了';
+  ctaBtn.onclick = a.onCta || closeAnnounceOverlay;
+
+  const laterBtn = $('announce-later-btn');
+  if (laterBtn) {
+    laterBtn.innerHTML = a.showPlans
+      ? '下次再說（可在選單 <span style="color:#9A6B2C">訂閱狀態</span> 找到）'
+      : '下次再說';
+  }
+}
+
+function closeAnnounceOverlay() {
+  hide('announce-overlay');
+  try { localStorage.setItem(ANNOUNCE_SEEN_KEY, _currentAnnounceId || ''); } catch (e) {}
+}
+
+const PENDING_ORDER_KEY = 'tc_pending_order';
+
+// 一般的 Email 格式檢查（有帳號、@、網域三段），足以擋掉大多數打字錯誤
+const SUBSCRIBE_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// 點方案後暫存要結帳的方案與信箱，等使用者在確認框按下「確認正確」才真的送出
+let pendingCheckout = null;
+
+// Email 欄位即時檢查：邊打邊提醒格式，格式對了就收起錯誤訊息。
+// 只要使用者動了信箱，就把已經跳出來的確認框收掉，避免確認的是舊信箱。
+function validateSubscribeEmail() {
+  const email = $('subscribe-email-input').value.trim();
+  const err = $('subscribe-email-error');
+
+  const confirmBox = $('subscribe-confirm');
+  if (confirmBox && !confirmBox.classList.contains('hidden')) {
+    confirmBox.classList.add('hidden');
+    pendingCheckout = null;
+  }
+
+  if (!email) { err.classList.add('hidden'); return; }
+  if (SUBSCRIBE_EMAIL_RE.test(email)) {
+    err.classList.add('hidden');
+  } else {
+    err.textContent = 'Email 格式看起來不太對，請確認有 @ 和網域（例如 name@example.com）';
+    err.classList.remove('hidden');
+  }
+}
+
+function goToCheckout(plan) {
+  const emailInput = $('subscribe-email-input');
+  const err = $('subscribe-email-error');
+  const email = emailInput.value.trim();
+
+  if (!SUBSCRIBE_EMAIL_RE.test(email)) {
+    err.textContent = '請輸入有效的 Email（例如 name@example.com），解鎖碼會綁定這個信箱';
+    err.classList.remove('hidden');
+    emailInput.focus();
+    return;
+  }
+  err.classList.add('hidden');
+
+  // 先不直接導去付款：跳一步讓使用者確認信箱正確再走。
+  // 打錯信箱不會馬上拿不到解鎖碼（碼付款後會直接顯示在畫面上），但會影響續訂延長與更新通知，所以在付錢前先確認一眼。
+  pendingCheckout = { plan, email };
+  $('subscribe-confirm-email').textContent = email;
+  $('subscribe-confirm').classList.remove('hidden');
+  $('subscribe-confirm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// 使用者在確認框按「信箱打錯了，返回修改」
+function cancelCheckoutConfirm() {
+  pendingCheckout = null;
+  $('subscribe-confirm').classList.add('hidden');
+  $('subscribe-email-input').focus();
+}
+
+// 訂單編號用 crypto 亂數產生（8 bytes ≈ 64 bits，寫成 16 個 hex 字元）。
+// 不是為了防碰撞（原本的時間戳+3位數亂數已經幾乎不會撞），而是因為 /redeem-by-order
+// 只憑 orderId 就能換回解鎖碼、不比對買家身分——舊寫法（時間戳+0~999）猜得到的話，
+// 等於別人已付款的訂單、解鎖碼可能被陌生人撈走。換成不可預測的亂數就沒有這個風險。
+function generateOrderId() {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return 'TC' + [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// 使用者在確認框按「確認正確，前往付款」才真的建立訂單、導去 PayUni
+function confirmCheckout() {
+  if (!pendingCheckout) return;
+  const { plan, email } = pendingCheckout;
+
+  // 訂單編號在「離開本站之前」自己產生、存進 localStorage——
+  // 這一步完全在自己網域內完成，不會經過任何跨網域轉址，保證一定存得進去。
+  // 之後就算 PayUni 導回來的網址不知道為什麼沒帶到 order 參數，回來時也能從 localStorage 找回這筆訂單繼續查。
+  const orderId = generateOrderId();
+  try {
+    localStorage.setItem(PENDING_ORDER_KEY, JSON.stringify({ orderId, createdAt: Date.now() }));
+  } catch (e) {}
+
+  // 導去 Worker：Worker 會建立訂單，回傳一個自動送出的表單，導向 PayUni 整合式付款頁（UPP）
+  const url = `${WORKER_BASE_URL}/create-order?plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}&orderId=${encodeURIComponent(orderId)}`;
+  window.location.href = url;
+}
+
+async function submitRedeemCode() {
+  const input = $('redeem-code-input');
+  const err = $('redeem-error');
+  const btn = $('btn-redeem-code');
+  err.classList.add('hidden');
+  btn.disabled = true;
+  btn.textContent = '驗證中…';
+
+  const result = await redeemCode(input.value);
+
+  btn.disabled = false;
+  btn.textContent = '輸入解鎖碼';
+
+  if (result.ok) {
+    closeSubscribeOverlay();
+    alert(`解鎖成功！有效期限到 ${new Date(result.expiresAt).toLocaleDateString('zh-TW')}`);
+  } else {
+    err.textContent = result.message;
+    err.classList.remove('hidden');
+  }
+}
+
+// ── 付款完成頁：自動解鎖 ──
+// PayUni 結帳完成後導回時，網址帶 ?order=訂單編號（同瀏覽器即時解鎖，不用輸入）
+// 或信箱裡的解鎖連結帶 ?unlock=解鎖碼（任何瀏覽器都可直接解鎖，無裝置數限制）
+async function handlePaymentReturnParams() {
+  const params = new URLSearchParams(location.search);
+  let orderId = params.get('order');
+  const unlockCode = params.get('unlock');
+
+  // 網址沒帶到 order 參數（可能在跨網域轉址過程中被瀏覽器清掉）時，
+  // 從離開本站前自己存的 localStorage 找回這筆還沒處理完的訂單，5 分鐘內都算有效。
+  if (!orderId) {
+    try {
+      const pendingRaw = localStorage.getItem(PENDING_ORDER_KEY);
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if (pending.orderId && Date.now() - pending.createdAt < 5 * 60 * 1000) {
+          orderId = pending.orderId;
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (orderId) {
+    show('payment-wait-overlay');
+    await waitForOrderCode(orderId);
+    hide('payment-wait-overlay');
+    try { localStorage.removeItem(PENDING_ORDER_KEY); } catch (e) {}
+  } else if (unlockCode) {
+    const result = await redeemCode(unlockCode);
+    alert(result.ok
+      ? `解鎖成功！有效期限到 ${new Date(result.expiresAt).toLocaleDateString('zh-TW')}`
+      : result.message);
+  }
+
+  if (orderId || unlockCode) {
+    params.delete('order');
+    params.delete('unlock');
+    const qs = params.toString();
+    history.replaceState(null, '', location.pathname + (qs ? `?${qs}` : '') + location.hash);
+  }
+}
+
+// 付款剛完成時，Worker 可能還在等 PayUni 的背景通知，這裡輪詢幾次等 code 準備好
+async function waitForOrderCode(orderId, attempts = 25, intervalMs = 3000) {
+  const debugEl = $('payment-wait-debug');
+  for (let i = 0; i < attempts; i++) {
+    if (debugEl) debugEl.textContent = `[除錯資訊] 訂單：${orderId}・網址參數：${location.search || '(空)'}・第 ${i + 1}/${attempts} 次確認`;
+    try {
+      const res = await fetch(`${WORKER_BASE_URL}/redeem-by-order?orderId=${encodeURIComponent(orderId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.code) {
+          const result = await redeemCode(data.code);
+          if (result.ok) {
+            alert(`訂閱已啟用！有效期限到 ${new Date(result.expiresAt).toLocaleDateString('zh-TW')}\n\n你的解鎖碼是：${data.code}\n\n⚠️ 請截圖或記下這組碼！在其他裝置上要輸入這組碼才能解鎖（不限裝置數量），目前沒有自動找回功能。`);
+            return;
+          }
+        }
+      }
+    } catch (e) { /* 忽略，繼續重試 */ }
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+  alert('付款確認比較久，但通常還是會成功，請等 1-2 分鐘後重新整理頁面，應該就會自動解鎖。若還是沒有，請聯絡客服協助查詢。');
+}
 
 function shuffle(arr) {
   const a = [...arr];
@@ -411,7 +809,9 @@ function importCustomSpreadsJSON() {
 
 // ── Start selection mode ──
 function startSelection(showPrepare = true) {
-  const pool = state.series === 'tarot' ? TAROT_CARDS : DEITY_CARDS;
+  const pool = state.series === 'tarot'
+    ? TAROT_CARDS
+    : (isSubscribed() ? [...DEITY_CARDS, ...DEITY_EXPANSION_CARDS] : DEITY_CARDS);
   state.deck = shuffle(pool);
   state.selections = new Array(state.spread.count).fill(null);
   state.currentPos = 0;
@@ -602,29 +1002,7 @@ function resetSelection() {
   startSelection(false);
 }
 
-// ── Show meanings ──
-function showMeanings(autoScroll = true) {
-  show('meanings-section');
-  renderMeanings();
-  // 從歷史還原或已儲存過：隱藏儲存按鈕
-  const saveBtn = $('btn-save-record');
-  if (saveBtn) {
-    if (state.fromHistory || state.saved) {
-      saveBtn.classList.add('hidden');
-    } else {
-      saveBtn.classList.remove('hidden');
-      saveBtn.textContent = '儲存這次紀錄';
-      saveBtn.disabled = false;
-    }
-  }
-  renderSubscribeBlock();
-  if (autoScroll) $('meanings-section').scrollIntoView({ behavior: 'smooth' });
-}
-
-// ── Email 訂閱區塊 ──
-const SUBSCRIBE_KEY = 'tc_subscribe_state'; // 'closed' | 'subscribed'（沒有值＝從未出現過）
-const WORKER_SUBSCRIBE_URL = 'https://triplecell-unlock.jouyu-chen-jc.workers.dev/subscribe';
-
+// ── Email 訂閱區塊（牌義解讀畫面）：只主動展開一次，之後收合成一行連結 ──
 function renderSubscribeBlock() {
   const s = localStorage.getItem(SUBSCRIBE_KEY);
   if (!$('subscribe-block') || !$('subscribe-link-row')) return;
@@ -655,9 +1033,9 @@ function openSubscribeBlock() {
   hide('subscribe-link-row');
 }
 
-// 共用的送出流程：結果頁區塊與開啟畫面預告都用這個（差別只在各自的輸入框/按鈕/訊息元素）
+// 共用的送出流程：牌義解讀區塊跟選單永久入口都用這個，差別只在各自的輸入框/按鈕/訊息元素
 async function doSubscribe({ emailInput, msgEl, btn, onSuccess }) {
-  const hpInput = $('subscribe-hp');
+  const hpInput = emailInput.closest('.subscribe-form, .menu-subscribe-block')?.querySelector('.subscribe-hp');
   const email = (emailInput.value || '').trim();
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -696,29 +1074,54 @@ function submitSubscribe() {
       const block = $('subscribe-block');
       if (block) block.innerHTML = '<p class="subscribe-thanks">✓ 已訂閱，謝謝你！</p>';
       hide('subscribe-link-row');
-      const launch = $('launch-subscribe');
-      if (launch) launch.classList.add('hidden');
+      renderMenuSubscribeBlock();
     },
   });
 }
 
-// 首頁的「搬新家」卡片按鈕：交給 migration.js 的對外 API 觸發真正的搬遷動作
-// （這裡只負責 UI 這一層，實際打包/導頁邏輯都在 migration.js，避免兩邊各寫一份容易兜不起來）
-function startCardsMigration() {
-  if (window.TripleCellMigration && typeof window.TripleCellMigration.go === 'function') {
-    window.TripleCellMigration.go();
+// ── Email 訂閱：選單裡的永久入口（跟上面那個不同，固定顯示，不收合成連結）──
+function renderMenuSubscribeBlock() {
+  const block = $('menu-subscribe-block');
+  if (!block) return;
+  const s = localStorage.getItem(SUBSCRIBE_KEY);
+  if (s === 'subscribed') {
+    block.innerHTML = '<p class="subscribe-thanks">✓ 已訂閱，謝謝你！</p>';
   }
 }
 
-// 開啟畫面的搬家公告：已經搬過的裝置就保持隱藏（跟 migration.js 共用同一個「已搬移」標記，
-// 不用自己另外存一個 key，兩邊才不會對不起來）
-function initLaunchSubscribe() {
-  const block = $('launch-subscribe');
-  if (!block) return;
-  const migrated = window.TripleCellMigration && window.TripleCellMigration.isMigrated();
-  if (!migrated) block.classList.remove('hidden');
+function submitMenuSubscribe() {
+  doSubscribe({
+    emailInput: $('menu-subscribe-email'),
+    msgEl: $('menu-subscribe-msg'),
+    btn: $('menu-subscribe-submit'),
+    onSuccess() {
+      const block = $('menu-subscribe-block');
+      if (block) block.innerHTML = '<p class="subscribe-thanks">✓ 已訂閱，謝謝你！</p>';
+      hide('subscribe-link-row');
+      const meaningsBlock = $('subscribe-block');
+      if (meaningsBlock) meaningsBlock.classList.add('hidden');
+    },
+  });
 }
-initLaunchSubscribe();
+
+// ── Show meanings ──
+function showMeanings(autoScroll = true) {
+  show('meanings-section');
+  renderMeanings();
+  // 從歷史還原或已儲存過：隱藏儲存按鈕
+  const saveBtn = $('btn-save-record');
+  if (saveBtn) {
+    if (state.fromHistory || state.saved) {
+      saveBtn.classList.add('hidden');
+    } else {
+      saveBtn.classList.remove('hidden');
+      saveBtn.textContent = '儲存這次紀錄';
+      saveBtn.disabled = false;
+    }
+  }
+  renderSubscribeBlock();
+  if (autoScroll) $('meanings-section').scrollIntoView({ behavior: 'smooth' });
+}
 
 function renderMeanings() {
   // 顯示題目
@@ -764,361 +1167,6 @@ function renderMeanings() {
       ${oracleText ? `<div class="meaning-oracle">${oracleText}</div>` : ''}
     `;
     container.appendChild(div);
-  });
-}
-
-// ── Fetch image as dataURL (bypasses canvas taint) ──
-async function fetchDataURL(src) {
-  try {
-    const res = await fetch(src);
-    if (!res.ok) { console.warn('[fetchDataURL] HTTP error', res.status, src); return null; }
-    const blob = await res.blob();
-    return new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (e) => { console.warn('[fetchDataURL] FileReader error', e); resolve(null); };
-      reader.readAsDataURL(blob);
-    });
-  } catch(e) {
-    console.warn('[fetchDataURL] fetch failed:', e.message, src);
-    return null;
-  }
-}
-
-// ── Export: save as PNG (1080×auto canvas renderer) ──
-async function saveImage() {
-  if (location.protocol === 'file:') {
-    alert('存圖功能需要透過伺服器開啟 👇\n\n請用瀏覽器開啟：\nhttp://127.0.0.1:5500');
-    return;
-  }
-
-  const btn = $('btn-save-image');
-  btn.textContent = '產生中…';
-  btn.disabled = true;
-
-  try {
-    const folder = state.series === 'tarot' ? 'images/tarot/' : 'images/deity/';
-
-    // 用 fetch 把每張圖片轉成 dataURL，完全繞開 canvas taint
-    await Promise.all(state.selections.map(async card => {
-      if (!card) return;
-      card._dataURL = await fetchDataURL(folder + card.file);
-    }));
-
-    // 把 dataURL 載入成 Image 物件供 canvas drawImage 使用
-    const cardImgs = await Promise.all(state.selections.map(card => {
-      if (!card || !card._dataURL) return Promise.resolve(null);
-      return new Promise(resolve => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
-        img.src = card._dataURL;
-      });
-    }));
-
-    const W = 1080;
-    const PAD = 64;
-    const INNER = W - PAD * 2;
-    const FONT = '"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
-    const CARD_RATIO = 207 / 125;
-    const count = state.spread.count;
-
-    // Card sizes by count
-    let cardW, cardsPerRow;
-    if (count === 1)      { cardW = 260; cardsPerRow = 1; }
-    else if (count <= 3)  { cardW = 210; cardsPerRow = count; }
-    else if (count <= 5)  { cardsPerRow = count; cardW = Math.floor((INNER - (count-1)*16) / count); }
-    else                  { cardsPerRow = Math.ceil(count/2); cardW = Math.floor((INNER - (cardsPerRow-1)*16) / cardsPerRow); }
-    const cardH = Math.round(cardW * CARD_RATIO);
-    const cardRows = Math.ceil(count / cardsPerRow);
-
-    // ── Helpers (work on a temp ctx for measurement) ──
-    const tmpC = document.createElement('canvas');
-    tmpC.width = INNER;
-    const tmpCtx = tmpC.getContext('2d');
-
-    function wrapLine(ctx, text, maxW, font) {
-      ctx.font = font;
-      const lines = [];
-      let cur = '';
-      for (const ch of text) {
-        const test = cur + ch;
-        if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = ch; }
-        else cur = test;
-      }
-      if (cur) lines.push(cur);
-      return lines;
-    }
-
-    // ── Pre-calculate total canvas height ──
-    let totalH = PAD + 52 + 72 + 52 + 44; // top pad + ornament + title + subtitle + divider
-
-    for (let r = 0; r < cardRows; r++) {
-      totalH += 40 + cardH + 44 + 20; // label + card + name + gap
-    }
-    totalH += 44 + 52; // divider + meanings header
-
-    const BPAD = 28;
-    const DESC_FONT = `400 30px ${FONT}`;
-    const KW_FONT   = `500 26px ${FONT}`;
-    for (const card of state.selections) {
-      if (!card) continue;
-      const pos = state.spread.positions[state.selections.indexOf(card)];
-      const desc = getPositionedDesc(card, pos);
-      const dLines = wrapLine(tmpCtx, desc, INNER - BPAD*2, DESC_FONT);
-      const kLines = card.meaning ? wrapLine(tmpCtx, card.meaning, INNER - BPAD*2, KW_FONT) : [];
-      const emptyLines = dLines.filter(l => l === '').length;
-      totalH += BPAD + 44 + kLines.length*38 + 10 + (dLines.length - emptyLines)*48 + emptyLines*24 + BPAD + 16;
-    }
-    totalH += PAD + 52; // bottom
-
-    const H = Math.max(1920, totalH);
-
-    // ── Draw ──
-    const canvas = document.createElement('canvas');
-    canvas.width = W; canvas.height = H;
-    const ctx = canvas.getContext('2d');
-
-    function rr(x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x+r, y);
-      ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
-      ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
-      ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
-      ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
-      ctx.closePath();
-    }
-
-    function ctxWrap(text, maxW, font) {
-      ctx.font = font;
-      const result = [];
-      for (const para of text.split('\n')) {
-        if (para === '') { result.push(''); continue; }
-        let cur = '';
-        for (const ch of para) {
-          const test = cur + ch;
-          if (ctx.measureText(test).width > maxW && cur) { result.push(cur); cur = ch; }
-          else cur = test;
-        }
-        if (cur) result.push(cur);
-      }
-      return result;
-    }
-
-    // Background
-    ctx.fillStyle = '#EDE8DF';
-    ctx.fillRect(0, 0, W, H);
-
-    let y = PAD;
-
-    // Ornament
-    ctx.fillStyle = '#97AFCA';
-    ctx.font = `500 36px ${FONT}`;
-    ctx.textAlign = 'center';
-    ctx.fillText('✦  ✦  ✦', W/2, y + 36);
-    y += 52;
-
-    // Title
-    ctx.fillStyle = '#2C3A4A';
-    ctx.font = `700 58px ${FONT}`;
-    ctx.fillText(state.spread.name, W/2, y + 58);
-    y += 72;
-
-    // Subtitle
-    ctx.fillStyle = '#5A6A7A';
-    ctx.font = `400 32px ${FONT}`;
-    ctx.fillText(state.spread.subtitle || '', W/2, y + 32);
-    y += 52;
-
-    // Divider
-    ctx.strokeStyle = '#D9D3C7';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W-PAD, y); ctx.stroke();
-    y += 44;
-
-    // Cards
-    for (let row = 0; row < cardRows; row++) {
-      const rStart = row * cardsPerRow;
-      const rEnd   = Math.min(rStart + cardsPerRow, count);
-      const rCount = rEnd - rStart;
-      const rowW   = rCount * cardW + (rCount-1) * 16;
-      const startX = (W - rowW) / 2;
-
-      // Labels
-      ctx.font = `600 24px ${FONT}`;
-      ctx.textAlign = 'center';
-      for (let i = rStart; i < rEnd; i++) {
-        const cx = startX + (i-rStart)*(cardW+16) + cardW/2;
-        const pos = state.spread.positions[i];
-        const lw = ctx.measureText(pos).width + 26;
-        ctx.fillStyle = '#4C7A91';
-        rr(cx - lw/2, y, lw, 32, 16); ctx.fill();
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(pos, cx, y + 16);
-        ctx.textBaseline = 'alphabetic';
-      }
-      y += 43;
-
-      // Images — 圖片在白框內縮 4% 留邊
-      const IMG_INSET = Math.round(cardW * 0.04);
-      for (let i = rStart; i < rEnd; i++) {
-        const cx = startX + (i-rStart)*(cardW+16);
-        const img = cardImgs[i];
-
-        ctx.shadowColor = 'rgba(44,58,74,0.18)';
-        ctx.shadowBlur = 14; ctx.shadowOffsetY = 5;
-        ctx.fillStyle = '#FFFFFF';
-        rr(cx-4, y-4, cardW+8, cardH+8, 12); ctx.fill();
-        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-
-        if (img) {
-          ctx.save();
-          rr(cx+IMG_INSET, y+IMG_INSET, cardW-IMG_INSET*2, cardH-IMG_INSET*2, 6); ctx.clip();
-          const selCard = state.selections[i];
-          if (selCard && selCard._isReversed) {
-            const ix = cx+IMG_INSET, iy = y+IMG_INSET, iw = cardW-IMG_INSET*2, ih = cardH-IMG_INSET*2;
-            ctx.translate(ix + iw/2, iy + ih/2);
-            ctx.rotate(Math.PI);
-            ctx.drawImage(img, -iw/2, -ih/2, iw, ih);
-          } else {
-            ctx.drawImage(img, cx+IMG_INSET, y+IMG_INSET, cardW-IMG_INSET*2, cardH-IMG_INSET*2);
-          }
-          ctx.restore();
-        } else {
-          ctx.fillStyle = '#D9D3C7';
-          rr(cx+IMG_INSET, y+IMG_INSET, cardW-IMG_INSET*2, cardH-IMG_INSET*2, 6); ctx.fill();
-        }
-      }
-      y += cardH;
-
-      // Card names — 間距 +8%
-      ctx.fillStyle = '#2C3A4A';
-      ctx.font = `600 26px ${FONT}`;
-      ctx.textAlign = 'center';
-      for (let i = rStart; i < rEnd; i++) {
-        const cx = startX + (i-rStart)*(cardW+16) + cardW/2;
-        const card = state.selections[i];
-        if (card) ctx.fillText(card.name, cx, y + 35);
-      }
-      y += 48 + 22;
-    }
-
-    // Divider
-    ctx.strokeStyle = '#D9D3C7';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W-PAD, y); ctx.stroke();
-    y += 44;
-
-    // Meanings header
-    ctx.fillStyle = '#97AFCA';
-    ctx.font = `500 34px ${FONT}`;
-    ctx.textAlign = 'center';
-    ctx.fillText('✦  牌義解讀  ✦', W/2, y + 34);
-    y += 52;
-
-    // Meaning blocks
-    for (let i = 0; i < state.selections.length; i++) {
-      const card = state.selections[i];
-      if (!card) continue;
-      const pos = state.spread.positions[i];
-      const desc = getPositionedDesc(card, pos);
-
-      const kLines = card.meaning ? ctxWrap(card.meaning, INNER - BPAD*2, KW_FONT) : [];
-      const dLines = ctxWrap(desc, INNER - BPAD*2, DESC_FONT);
-      const emptyLines = dLines.filter(l => l === '').length;
-      const blockH = BPAD + 44 + kLines.length*38 + 10 + (dLines.length - emptyLines)*48 + emptyLines*24 + BPAD;
-
-      ctx.fillStyle = '#F5F2EC';
-      rr(PAD, y, INNER, blockH, 16); ctx.fill();
-
-      let by = y + BPAD;
-
-      // Badge
-      ctx.font = `600 22px ${FONT}`;
-      const bw = ctx.measureText(pos).width + 24;
-      ctx.fillStyle = '#4C7A91';
-      rr(PAD+BPAD, by, bw, 30, 15); ctx.fill();
-      ctx.fillStyle = '#FFFFFF';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(pos, PAD+BPAD+12, by+15);
-      ctx.textBaseline = 'alphabetic';
-
-      // Name
-      ctx.fillStyle = '#2C3A4A';
-      ctx.font = `700 34px ${FONT}`;
-      ctx.fillText(card.name, PAD+BPAD+bw+14, by+25);
-      by += 44;
-
-      // Keywords
-      ctx.fillStyle = '#C66240';
-      ctx.font = KW_FONT;
-      for (const ln of kLines) { ctx.fillText(ln, PAD+BPAD, by+24); by += 38; }
-      if (kLines.length) by += 10;
-
-      // Description
-      ctx.fillStyle = '#5A6A7A';
-      ctx.font = DESC_FONT;
-      for (const ln of dLines) {
-        if (ln === '') { by += 24; continue; } // 段落間距
-        ctx.fillText(ln, PAD+BPAD, by+30); by += 48;
-      }
-
-      y += blockH + 16;
-    }
-
-    // Bottom ornament + 版權
-    const botY = Math.max(y + 32, H - 100);
-    ctx.fillStyle = '#97AFCA';
-    ctx.font = `500 32px ${FONT}`;
-    ctx.textAlign = 'center';
-    ctx.fillText('✦  ✦  ✦', W/2, botY);
-
-    ctx.fillStyle = '#9AABB8';
-    ctx.font = `400 22px ${FONT}`;
-    ctx.fillText('CC Triple.Cell_illustration | 細胞日常插畫', W/2, botY + 44);
-
-    // Download
-    const link = document.createElement('a');
-    const today = new Date();
-    const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
-    link.download = `Triple.Cell_${state.spread.name}_${dateStr}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-
-  } catch (err) {
-    console.error(err);
-    alert('圖片產生失敗，請重試。');
-  } finally {
-    btn.textContent = '存成圖片';
-    btn.disabled = false;
-  }
-}
-
-// ── Export: copy text ──
-function copyText() {
-  const btn = $('btn-copy-text');
-  const lines = [`【${state.spread.name}】`, ''];
-  state.selections.forEach((card, i) => {
-    if (!card) return;
-    const pos = state.spread.positions[i];
-    const rev = !!card._isReversed;
-    const nameLine = rev ? `${card.name}（逆位）` : card.name;
-    const keyword = rev ? (card.meaningReversed || card.meaning || '') : (card.meaning || '');
-    const desc = rev ? (card.descReversed || card.desc || card.message || '') : (card.desc || card.message || '');
-    lines.push(`▍${pos}・${nameLine}`);
-    if (keyword) lines.push(keyword);
-    lines.push(desc);
-    lines.push('');
-  });
-
-  navigator.clipboard.writeText(lines.join('\n')).then(() => {
-    btn.textContent = '✓ 已複製';
-    setTimeout(() => { btn.textContent = '複製文字'; }, 2000);
-  }).catch(() => {
-    btn.textContent = '複製失敗';
-    setTimeout(() => { btn.textContent = '複製文字'; }, 2000);
   });
 }
 
@@ -1256,7 +1304,7 @@ function viewHistory(id) {
     state.spread = { ...SPREADS[entry.spreadKey], _key: entry.spreadKey };
   }
 
-  const pool = entry.series === 'tarot' ? TAROT_CARDS : DEITY_CARDS;
+  const pool = entry.series === 'tarot' ? TAROT_CARDS : [...DEITY_CARDS, ...DEITY_EXPANSION_CARDS];
   state.selections = entry.selections.map(s => {
     const c = pool.find(c => c.id === s.cardId);
     return c ? { ...c, _isReversed: !!s.isReversed } : null;
@@ -1379,7 +1427,11 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-seasons-no').addEventListener('click', () => showOnly('screen-spread'));
   $('btn-reset-selection').addEventListener('click', resetSelection);
   $('btn-reveal-meanings').addEventListener('click', showMeanings);
-  $('btn-save-image').addEventListener('click', saveImage);
-  $('btn-copy-text').addEventListener('click', copyText);
   renderChangelogLatest();
+
+  loadSubscription();
+  renderLockState();
+  handlePaymentReturnParams();
+  refreshSubscription();
+  renderMenuSubscribeBlock();
 });
